@@ -42,6 +42,33 @@
     const panel = $(tabId);
     if (panel) panel.classList.add("active");
     if (btnEl) btnEl.classList.add("active");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setTimeout(() => {
+      Object.values(charts).forEach(c => {
+        if (c && typeof c.resize === "function") c.resize();
+      });
+    }, 40);
+  }
+
+  function scrollToBlock(blockId) {
+    const el = $(blockId);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function runCreditRiskSuiteUI() {
+    try {
+      setStatus("crSuiteStatus", "Đang chạy lại 5 khối Rủi ro Tín dụng...", "info");
+      runScorecardUI();
+      runCorporateUI();
+      runConsumerUI();
+      runTermStructureUI();
+      runBaselUI();
+      runProjectUI();
+      runNplUI();
+      setStatus("crSuiteStatus", "Đã cập nhật toàn bộ 5 khối Tín dụng!", "ok");
+    } catch (err) {
+      setStatus("crSuiteStatus", `Lỗi: ${err.message}`, "err");
+    }
   }
 
   // =========================================================================
@@ -1012,6 +1039,8 @@
 
   // Gắn toàn bộ hàm vào window để sự kiện inline HTML không bao giờ lỗi
   global.switchTab = switchTab;
+  global.scrollToBlock = scrollToBlock;
+  global.runCreditRiskSuiteUI = runCreditRiskSuiteUI;
   global.runAllModels = runAllModels;
   global.exportSampleCSV = exportSampleCSV;
   global.handleFileUpload = handleFileUpload;

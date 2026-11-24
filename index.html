@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex, nofollow, noarchive" />
   <title>Crisk-boy</title>
-  <link rel="stylesheet" href="styles.css?v=2.1" />
+  <link rel="stylesheet" href="styles.css?v=2.2" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -16,7 +16,7 @@
       <p>Trọn bộ 10 Module tự động &amp; trực quan: Credit Scorecard 8 bước, Altman Z, Basel I/II, Phép đo Lãi suất &amp; Arbitrage, GAP/Duration/Convexity &amp; Phái sinh, Ngoại hối, Thanh khoản, Chứng khoán hóa CMO, CAR &amp; CAMEL</p>
     </div>
     <div class="header-actions">
-      <span class="version-badge">Crisk-boy v2.1</span>
+      <span class="version-badge">Crisk-boy v2.2</span>
       <button class="btn btn-success" onclick="window.runAllModels()">▶ Chạy toàn bộ mô hình</button>
       <button class="btn btn-outline" style="color:#0f172a;" onclick="window.exportSampleCSV()">⬇ Tải CSV mẫu</button>
       <span id="globalStatus" class="status-msg status-info">Sẵn sàng</span>
@@ -25,15 +25,11 @@
 
   <nav class="tab-nav">
     <button class="tab-btn active" data-tab="tab-overview" onclick="window.switchTab('tab-overview', this)">1. Tổng quan &amp; Vòng đời</button>
-    <button class="tab-btn" data-tab="tab-scorecard" onclick="window.switchTab('tab-scorecard', this)">2. Credit Scorecard 8 Bước</button>
-    <button class="tab-btn" data-tab="tab-corporate" onclick="window.switchTab('tab-corporate', this)">3. Doanh nghiệp (Altman Z &amp; 6C/5P)</button>
-    <button class="tab-btn" data-tab="tab-consumer" onclick="window.switchTab('tab-consumer', this)">4. Điểm Tín dụng Tiêu dùng</button>
-    <button class="tab-btn" data-tab="tab-basel" onclick="window.switchTab('tab-basel', this)">5. Cấu trúc Kỳ hạn &amp; Basel I/II</button>
-    <button class="tab-btn" data-tab="tab-project" onclick="window.switchTab('tab-project', this)">6. Dự án, Trả nợ &amp; Nợ xấu (NPL)</button>
-    <button class="tab-btn" data-tab="tab-interest" onclick="window.switchTab('tab-interest', this)">7. Lãi suất, LSHVBQ &amp; Arbitrage (C2)</button>
-    <button class="tab-btn" data-tab="tab-raterisk" onclick="window.switchTab('tab-raterisk', this)">8. RR Lãi suất: GAP, Duration &amp; Phái sinh (C3–4)</button>
-    <button class="tab-btn" data-tab="tab-fxliq" onclick="window.switchTab('tab-fxliq', this)">9. Ngoại hối, Thanh khoản &amp; CMO (C5–7–9)</button>
-    <button class="tab-btn" data-tab="tab-carcamel" onclick="window.switchTab('tab-carcamel', this)">10. An toàn Vốn (CAR) &amp; CAMEL (C10–11)</button>
+    <button class="tab-btn" data-tab="tab-credit-all" onclick="window.switchTab('tab-credit-all', this)">2. Mô hình Rủi ro Tín dụng (Scorecard, Altman Z, Basel &amp; NPL)</button>
+    <button class="tab-btn" data-tab="tab-interest" onclick="window.switchTab('tab-interest', this)">3. Lãi suất, LSHVBQ &amp; Arbitrage (C2)</button>
+    <button class="tab-btn" data-tab="tab-raterisk" onclick="window.switchTab('tab-raterisk', this)">4. RR Lãi suất: GAP, Duration &amp; Phái sinh (C3–4)</button>
+    <button class="tab-btn" data-tab="tab-fxliq" onclick="window.switchTab('tab-fxliq', this)">5. Ngoại hối, Thanh khoản &amp; CMO (C5–7–9)</button>
+    <button class="tab-btn" data-tab="tab-carcamel" onclick="window.switchTab('tab-carcamel', this)">6. An toàn Vốn (CAR) &amp; CAMEL (C10–11)</button>
   </nav>
 
   <main class="main-wrap">
@@ -158,8 +154,28 @@
       </div>
     </section>
 
-    <!-- ==================== TAB 2: CREDIT SCORECARD 8 BƯỚC ==================== -->
-    <section id="tab-scorecard" class="tab-panel">
+    <!-- ==================== TAB 2: MÔ HÌNH RỦI RO TÍN DỤNG TỔNG HỢP (TOÀN BỘ CẤU TRÚC v1.0) ==================== -->
+    <section id="tab-credit-all" class="tab-panel">
+      <div class="sub-nav-bar">
+        <div class="sub-nav-links">
+          <button class="sub-nav-pill" onclick="window.scrollToBlock('sec-scorecard')">2.1 Credit Scorecard 8 Bước</button>
+          <button class="sub-nav-pill" onclick="window.scrollToBlock('sec-corporate')">2.2 Doanh nghiệp (Altman Z &amp; 6C/5P)</button>
+          <button class="sub-nav-pill" onclick="window.scrollToBlock('sec-consumer')">2.3 Tín dụng Tiêu dùng</button>
+          <button class="sub-nav-pill" onclick="window.scrollToBlock('sec-basel')">2.4 Cấu trúc Kỳ hạn &amp; Basel I/II</button>
+          <button class="sub-nav-pill" onclick="window.scrollToBlock('sec-project')">2.5 Dự án, Trả nợ &amp; Nợ xấu (NPL)</button>
+        </div>
+        <div>
+          <button class="btn btn-primary btn-sm" onclick="window.runCreditRiskSuiteUI()">▶ Chạy lại toàn bộ Tab Tín dụng</button>
+          <span id="crSuiteStatus" class="status-msg status-ok">Đã chạy tự động</span>
+        </div>
+      </div>
+
+      <div id="sec-scorecard" class="credit-block">
+        <div class="block-banner">
+          <h2>2.1 Credit Scorecard 8 Bước (WoE/IV, Logistic, ROC/KS, PDO, Master Scale, Cut-off &amp; PSI/HHI)</h2>
+          <span class="badge badge-info">A-Card &amp; Kiểm định mô hình</span>
+        </div>
+
       <div class="card">
         <div class="card-header">
           <h2>Cấu hình Thang điểm PDO &amp; Chạy Quy trình 8 Bước Tự động</h2>
@@ -295,10 +311,15 @@
           </table>
         </div>
       </div>
-    </section>
+    
+      </div>
 
-    <!-- ==================== TAB 3: DOANH NGHIỆP (ALTMAN Z & TỶ SỐ & 6C/5P) ==================== -->
-    <section id="tab-corporate" class="tab-panel">
+      <div id="sec-corporate" class="credit-block">
+        <div class="block-banner">
+          <h2>2.2 Phân tích Tín dụng Doanh nghiệp (Altman Z / Z' / Z'', 5 Nhóm Tỷ số &amp; Định tính 6C / 5P / CAMPARI)</h2>
+          <span class="badge badge-info">Khách hàng Doanh nghiệp</span>
+        </div>
+
       <div class="card">
         <div class="card-header">
           <h2>Nhập liệu Báo cáo Tài chính Doanh nghiệp (Đơn vị: Triệu VND)</h2>
@@ -376,10 +397,15 @@
           <div class="chart-box-sm"><canvas id="chartQualitative"></canvas></div>
         </div>
       </div>
-    </section>
+    
+      </div>
 
-    <!-- ==================== TAB 4: TÍN DỤNG TIÊU DÙNG ==================== -->
-    <section id="tab-consumer" class="tab-panel">
+      <div id="sec-consumer" class="credit-block">
+        <div class="block-banner">
+          <h2>2.3 Mô hình Điểm số Tín dụng Tiêu dùng (8 Hạng mục — Thang 9 đến 43 điểm)</h2>
+          <span class="badge badge-info">Khách hàng Cá nhân</span>
+        </div>
+
       <div class="grid-2">
         <div class="card">
           <div class="card-header">
@@ -466,10 +492,15 @@
           <div class="chart-box"><canvas id="chartConsumer"></canvas></div>
         </div>
       </div>
-    </section>
+    
+      </div>
 
-    <!-- ==================== TAB 5: CẤU TRÚC KỲ HẠN & BASEL I / II ==================== -->
-    <section id="tab-basel" class="tab-panel">
+      <div id="sec-basel" class="credit-block">
+        <div class="block-banner">
+          <h2>2.4 Cấu trúc Kỳ hạn Rủi ro Tín dụng (Term Structure) &amp; Yêu cầu Vốn Basel I / II (SA, F-IRB, A-IRB)</h2>
+          <span class="badge badge-info">Đo lường PD tích lũy &amp; RWA</span>
+        </div>
+
       <div class="grid-2">
         <!-- Term Structure -->
         <div class="card">
@@ -535,10 +566,15 @@
           </table>
         </div>
       </div>
-    </section>
+    
+      </div>
 
-    <!-- ==================== TAB 6: DỰ ÁN, TRẢ NỢ & NỢ XẤU (NPL) ==================== -->
-    <section id="tab-project" class="tab-panel">
+      <div id="sec-project" class="credit-block">
+        <div class="block-banner">
+          <h2>2.5 Thẩm định Dự án (NPV, IRR, BCR, BEP), Kế hoạch Trả nợ Cty X &amp; Phân loại Nợ 5 Nhóm (NPL)</h2>
+          <span class="badge badge-info">Thẩm định &amp; Quản trị Nợ xấu</span>
+        </div>
+
       <div class="grid-2">
         <!-- Project Finance: NPV, IRR, BCR, BEP -->
         <div class="card">
@@ -610,9 +646,11 @@
           </table>
         </div>
       </div>
+    
+      </div>
     </section>
 
-    <!-- ==================== TAB 7: LÃI SUẤT, LSHVBQ & ARBITRAGE (CHƯƠNG 2) ==================== -->
+    <!-- ==================== TAB 3: LÃI SUẤT, LSHVBQ & ARBITRAGE (CHƯƠNG 2) ==================== -->
     <section id="tab-interest" class="tab-panel">
       <div class="grid-2">
         <div class="card">
@@ -688,7 +726,7 @@
       </div>
     </section>
 
-    <!-- ==================== TAB 8: RỦI RO LÃI SUẤT (CHƯƠNG 3 & 4) ==================== -->
+    <!-- ==================== TAB 4: RỦI RO LÃI SUẤT (CHƯƠNG 3 & 4) ==================== -->
     <section id="tab-raterisk" class="tab-panel">
       <div class="card">
         <div class="card-header">
@@ -744,7 +782,7 @@
       </div>
     </section>
 
-    <!-- ==================== TAB 9: NGOẠI HỐI, THANH KHOẢN & CHỨNG KHOÁN HÓA (C5, C7, C9) ==================== -->
+    <!-- ==================== TAB 5: NGOẠI HỐI, THANH KHOẢN & CHỨNG KHOÁN HÓA (C5, C7, C9) ==================== -->
     <section id="tab-fxliq" class="tab-panel">
       <div class="grid-2">
         <!-- FX Risk -->
@@ -809,7 +847,7 @@
       </div>
     </section>
 
-    <!-- ==================== TAB 10: VỐN TỰ CÓ (CAR) & CAMEL (CHƯƠNG 10 & 11) ==================== -->
+    <!-- ==================== TAB 6: VỐN TỰ CÓ (CAR) & CAMEL (CHƯƠNG 10 & 11) ==================== -->
     <section id="tab-carcamel" class="tab-panel">
       <div class="grid-2">
         <div class="card">
@@ -860,9 +898,9 @@
     </section>
   </main>
 
-  <script src="sample_data.js?v=2.1"></script>
-  <script src="models_engine.js?v=2.1"></script>
-  <script src="bank_risk_engine.js?v=2.1"></script>
-  <script src="app.js?v=2.1"></script>
+  <script src="sample_data.js?v=2.2"></script>
+  <script src="models_engine.js?v=2.2"></script>
+  <script src="bank_risk_engine.js?v=2.2"></script>
+  <script src="app.js?v=2.2"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-/* Crisk-boy v2.1 — Clean Banking Analytics UI */
+/* Crisk-boy v2.2 — Clean Banking Analytics UI */
 :root {
   --bg: #f4f7fb;
   --surface: #ffffff;
@@ -337,4 +337,60 @@ tbody tr:hover { background: #f8fafc; }
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.78rem;
   color: #334155;
+}
+
+/* v2.2 Unified Credit Risk Tab (Tab 2) */
+.sub-nav-bar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  box-shadow: var(--shadow);
+}
+.sub-nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sub-nav-pill {
+  background: var(--primary-soft);
+  color: var(--primary);
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.sub-nav-pill:hover {
+  background: var(--primary);
+  color: #fff;
+}
+.credit-block {
+  scroll-margin-top: 68px;
+  margin-bottom: 28px;
+}
+.block-banner {
+  background: linear-gradient(90deg, #eff6ff 0%, #f8fafc 100%);
+  border-left: 5px solid var(--primary);
+  border-radius: 8px;
+  padding: 10px 16px;
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.block-banner h2 {
+  margin: 0;
+  font-size: 1.06rem;
+  color: #1e3a8a;
 }
