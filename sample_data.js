@@ -256,6 +256,21 @@
     camelLiqPct: 22.5
   };
 
+
+  PRESETS.baselIII = {
+    cet1: 11.5,        // Tr. USD
+    at1: 2.0,          // Tr. USD
+    tier2: 3.5,        // Tr. USD
+    rwaStd: 145.0,     // RWA Chuẩn hóa (Tr. USD)
+    rwaIrb: 95.0,      // RWA IRB nội bộ (Tr. USD) — dùng tính Output Floor 72.5%
+    totalExposure: 320.0, // Tổng phơi nhiễm nội + ngoại bảng cho Leverage Ratio
+    ccybPct: 1.0,      // Bộ đệm phản chu kỳ (0 - 2.5%)
+    hqla: 42.0,        // Tài sản thanh khoản chất lượng cao (HQLA)
+    netOutflows30d: 35.0, // Dòng tiền ra ròng 30 ngày
+    asf: 185.0,        // Nguồn vốn ổn định sẵn có (Available Stable Funding)
+    rsf: 160.0         // Nguồn vốn ổn định yêu cầu (Required Stable Funding)
+  };
+
   global.CreditSampleData = {
     generateHomeCreditSample,
     PRESETS

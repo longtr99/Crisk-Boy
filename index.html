@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex, nofollow, noarchive" />
   <title>Crisk-boy</title>
-  <link rel="stylesheet" href="styles.css?v=2.2" />
+  <link rel="stylesheet" href="styles.css?v=2.3" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -13,10 +13,10 @@
   <header class="app-header">
     <div class="brand">
       <h1>Crisk-boy</h1>
-      <p>Trọn bộ 10 Module tự động &amp; trực quan: Credit Scorecard 8 bước, Altman Z, Basel I/II, Phép đo Lãi suất &amp; Arbitrage, GAP/Duration/Convexity &amp; Phái sinh, Ngoại hối, Thanh khoản, Chứng khoán hóa CMO, CAR &amp; CAMEL</p>
+      <p>Trọn bộ 10 Module tự động &amp; trực quan: Credit Scorecard 8 bước, Altman Z, Basel I/II/III, Phép đo Lãi suất &amp; Arbitrage, GAP/Duration/Convexity &amp; Phái sinh, Ngoại hối, Thanh khoản, Chứng khoán hóa CMO, CAR &amp; CAMEL</p>
     </div>
     <div class="header-actions">
-      <span class="version-badge">Crisk-boy v2.2</span>
+      <span class="version-badge">Crisk-boy v2.3</span>
       <button class="btn btn-success" onclick="window.runAllModels()">▶ Chạy toàn bộ mô hình</button>
       <button class="btn btn-outline" style="color:#0f172a;" onclick="window.exportSampleCSV()">⬇ Tải CSV mẫu</button>
       <span id="globalStatus" class="status-msg status-info">Sẵn sàng</span>
@@ -124,7 +124,7 @@
               <li>Chấm điểm hành vi (B-Score) &amp; Cảnh báo sớm (EWS)</li>
               <li>Giám sát ổn định thang điểm (PSI, KS, HHI)</li>
               <li>Phân loại nợ 5 nhóm, Trích lập dự phòng, NPL &amp; NQH</li>
-              <li>Tính vốn yêu cầu Basel I / II (Standardized, F-IRB, A-IRB)</li>
+              <li>Tính vốn yêu cầu Basel I / II / III (Standardized, F-IRB, A-IRB)</li>
             </ul>
           </div>
           <div class="lifecycle-box lc-coll">
@@ -161,7 +161,7 @@
           <button class="sub-nav-pill" onclick="window.scrollToBlock('sec-scorecard')">2.1 Credit Scorecard 8 Bước</button>
           <button class="sub-nav-pill" onclick="window.scrollToBlock('sec-corporate')">2.2 Doanh nghiệp (Altman Z &amp; 6C/5P)</button>
           <button class="sub-nav-pill" onclick="window.scrollToBlock('sec-consumer')">2.3 Tín dụng Tiêu dùng</button>
-          <button class="sub-nav-pill" onclick="window.scrollToBlock('sec-basel')">2.4 Cấu trúc Kỳ hạn &amp; Basel I/II</button>
+          <button class="sub-nav-pill" onclick="window.scrollToBlock('sec-basel')">2.4 Cấu trúc Kỳ hạn &amp; Basel I/II/III</button>
           <button class="sub-nav-pill" onclick="window.scrollToBlock('sec-project')">2.5 Dự án, Trả nợ &amp; Nợ xấu (NPL)</button>
         </div>
         <div>
@@ -497,7 +497,7 @@
 
       <div id="sec-basel" class="credit-block">
         <div class="block-banner">
-          <h2>2.4 Cấu trúc Kỳ hạn Rủi ro Tín dụng (Term Structure) &amp; Yêu cầu Vốn Basel I / II (SA, F-IRB, A-IRB)</h2>
+          <h2>2.4 Cấu trúc Kỳ hạn Rủi ro Tín dụng (Term Structure) &amp; Yêu cầu Vốn Basel I / II / III (SA, F-IRB, A-IRB)</h2>
           <span class="badge badge-info">Đo lường PD tích lũy &amp; RWA</span>
         </div>
 
@@ -566,6 +566,53 @@
           </table>
         </div>
       </div>
+      <!-- Basel III: CET1, Buffers, Leverage Ratio, Output Floor 72.5%, LCR & NSFR -->
+      <div class="card">
+        <div class="card-header">
+          <h3>4. Basel III (Vốn CET1, Bộ đệm CCB/CCyB, Output Floor 72.5%, Leverage Ratio, LCR &amp; NSFR)</h3>
+          <div>
+            <button class="btn btn-primary btn-sm" onclick="window.runBaselIIIUI()">▶ Tính chuẩn Basel III</button>
+            <span id="b3OverallBadge" class="badge badge-success">--</span>
+          </div>
+        </div>
+        <div class="grid-5">
+          <div class="form-group"><label>Vốn CET1 (Tr. USD)</label><input type="number" id="b3_cet1" step="0.5" /></div>
+          <div class="form-group"><label>Vốn AT1 (Tr. USD)</label><input type="number" id="b3_at1" step="0.5" /></div>
+          <div class="form-group"><label>Vốn Tier 2 (Tr. USD)</label><input type="number" id="b3_t2" step="0.5" /></div>
+          <div class="form-group"><label>RWA Chuẩn hóa — SA (Tr. USD)</label><input type="number" id="b3_rwaStd" step="5" /></div>
+          <div class="form-group"><label>RWA Nội bộ — IRB (Tr. USD)</label><input type="number" id="b3_rwaIrb" step="5" /></div>
+          <div class="form-group"><label>Tổng phơi nhiễm (Leverage)</label><input type="number" id="b3_exp" step="10" /></div>
+          <div class="form-group"><label>Bộ đệm phản chu kỳ CCyB (%)</label><input type="number" id="b3_ccyb" step="0.25" min="0" max="2.5" /></div>
+          <div class="form-group"><label>Tài sản thanh khoản HQLA</label><input type="number" id="b3_hqla" step="1" /></div>
+          <div class="form-group"><label>Dòng tiền ra ròng 30 ngày</label><input type="number" id="b3_outflow" step="1" /></div>
+          <div class="form-group"><label>ASF / RSF (cách nhau dấu /)</label><input type="text" id="b3_asfrsf" /></div>
+        </div>
+
+        <div class="grid-4" style="margin-top:10px;">
+          <div class="kpi-card">
+            <div class="kpi-label">CET1 Ratio (Chuẩn ≥4.5%+Buffer)</div>
+            <div class="kpi-value" id="res_b3_cet1">--</div>
+            <div class="kpi-sub" id="res_b3_cet1Req">--</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Tier 1 / Total CAR (Basel III)</div>
+            <div class="kpi-value" id="res_b3_car">--</div>
+            <div class="kpi-sub" id="res_b3_floor">--</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Leverage Ratio (≥ 3.0%)</div>
+            <div class="kpi-value" id="res_b3_lev">--</div>
+            <div class="kpi-sub" id="res_b3_levStatus">--</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Thanh khoản LCR / NSFR (≥100%)</div>
+            <div class="kpi-value" id="res_b3_liq">--</div>
+            <div class="kpi-sub" id="res_b3_liqStatus">--</div>
+          </div>
+        </div>
+        <div class="chart-box-sm" style="margin-top:12px;"><canvas id="chartBaselIII"></canvas></div>
+      </div>
+
     
       </div>
 
@@ -898,9 +945,9 @@
     </section>
   </main>
 
-  <script src="sample_data.js?v=2.2"></script>
-  <script src="models_engine.js?v=2.2"></script>
-  <script src="bank_risk_engine.js?v=2.2"></script>
-  <script src="app.js?v=2.2"></script>
+  <script src="sample_data.js?v=2.3"></script>
+  <script src="models_engine.js?v=2.3"></script>
+  <script src="bank_risk_engine.js?v=2.3"></script>
+  <script src="app.js?v=2.3"></script>
 </body>
 </html>

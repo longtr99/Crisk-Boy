@@ -786,6 +786,56 @@
     };
   }
 
+
+  function calculateBaselIII(p) {
+    const cet1 = Number(p.cet1);
+    const at1 = Number(p.at1);
+    const tier2 = Number(p.tier2);
+    const tier1 = cet1 + at1;
+    const totalCap = tier1 + tier2;
+
+    const rwaStd = Math.max(1e-6, Number(p.rwaStd));
+    const rwaIrb = Math.max(1e-6, Number(p.rwaIrb));
+    // Basel III Finalized Output Floor: RWA hiệu dụng >= 72.5% * RWA Chuẩn hóa
+    const outputFloorRwa = 0.725 * rwaStd;
+    const effectiveRwa = Math.max(rwaIrb, outputFloorRwa);
+    const floorTriggered = outputFloorRwa > rwaIrb;
+
+    const cet1Ratio = cet1 / effectiveRwa;
+    const tier1Ratio = tier1 / effectiveRwa;
+    const totalCar = totalCap / effectiveRwa;
+
+    const ccb = 0.025; // Capital Conservation Buffer = 2.5%
+    const ccyb = Math.min(0.025, Math.max(0, Number(p.ccybPct) / 100));
+    const reqCet1 = 0.045 + ccb + ccyb;
+    const reqTier1 = 0.06 + ccb + ccyb;
+    const reqTotal = 0.08 + ccb + ccyb;
+
+    const totalExp = Math.max(1e-6, Number(p.totalExposure));
+    const leverageRatio = tier1 / totalExp; // >= 3.0%
+
+    const lcr = Number(p.hqla) / Math.max(1e-6, Number(p.netOutflows30d)); // >= 100%
+    const nsfr = Number(p.asf) / Math.max(1e-6, Number(p.rsf)); // >= 100%
+
+    const checks = {
+      cet1Pass: cet1Ratio >= reqCet1,
+      tier1Pass: tier1Ratio >= reqTier1,
+      totalPass: totalCar >= reqTotal,
+      levPass: leverageRatio >= 0.03,
+      lcrPass: lcr >= 1.0,
+      nsfrPass: nsfr >= 1.0
+    };
+    const allPass = Object.values(checks).every(Boolean);
+
+    return {
+      cet1, at1, tier1, tier2, totalCap,
+      rwaStd, rwaIrb, outputFloorRwa, effectiveRwa, floorTriggered,
+      cet1Ratio, tier1Ratio, totalCar,
+      reqCet1, reqTier1, reqTotal, ccb, ccyb,
+      leverageRatio, lcr, nsfr, checks, allPass
+    };
+  }
+
   global.CreditModelsEngine = {
     normCDF,
     normInv,
@@ -795,6 +845,7 @@
     calculateConsumerScore,
     calculateTermStructure,
     calculateBaselIRB,
+    calculateBaselIII,
     calculateProjectFinance,
     calculateRepaymentPlan,
     calculatePortfolioNPL

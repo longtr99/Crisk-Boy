@@ -63,6 +63,7 @@
       runConsumerUI();
       runTermStructureUI();
       runBaselUI();
+      runBaselIIIUI();
       runProjectUI();
       runNplUI();
       setStatus("crSuiteStatus", "Đã cập nhật toàn bộ 5 khối Tín dụng!", "ok");
@@ -604,6 +605,92 @@
     $("baselSaSummary").textContent = `Tổng RWA Chuẩn hóa: ${fmtNum(sumRwa, 2)} Tr. USD | Vốn 8%: ${fmtNum(sumRwa * 0.08, 2)} Tr. USD`;
   }
 
+
+  function initBaselIIIInputs() {
+    const b3 = Sample.PRESETS.baselIII;
+    $("b3_cet1").value = b3.cet1;
+    $("b3_at1").value = b3.at1;
+    $("b3_t2").value = b3.tier2;
+    $("b3_rwaStd").value = b3.rwaStd;
+    $("b3_rwaIrb").value = b3.rwaIrb;
+    $("b3_exp").value = b3.totalExposure;
+    $("b3_ccyb").value = b3.ccybPct;
+    $("b3_hqla").value = b3.hqla;
+    $("b3_outflow").value = b3.netOutflows30d;
+    $("b3_asfrsf").value = `${b3.asf} / ${b3.rsf}`;
+  }
+
+  function runBaselIIIUI() {
+    const parts = String($("b3_asfrsf").value).split("/").map(s => Number(s.trim()));
+    const asf = !isNaN(parts[0]) && parts[0] > 0 ? parts[0] : 185;
+    const rsf = !isNaN(parts[1]) && parts[1] > 0 ? parts[1] : 160;
+
+    const res = Engine.calculateBaselIII({
+      cet1: $("b3_cet1").value,
+      at1: $("b3_at1").value,
+      tier2: $("b3_t2").value,
+      rwaStd: $("b3_rwaStd").value,
+      rwaIrb: $("b3_rwaIrb").value,
+      totalExposure: $("b3_exp").value,
+      ccybPct: $("b3_ccyb").value,
+      hqla: $("b3_hqla").value,
+      netOutflows30d: $("b3_outflow").value,
+      asf,
+      rsf
+    });
+
+    $("res_b3_cet1").textContent = fmtPct(res.cet1Ratio, 2);
+    $("res_b3_cet1Req").textContent = `Yêu cầu (4.5%+CCB+CCyB): ≥ ${fmtPct(res.reqCet1, 2)}`;
+    $("res_b3_car").textContent = `${fmtPct(res.tier1Ratio, 1)} / ${fmtPct(res.totalCar, 1)}`;
+    $("res_b3_floor").textContent = res.floorTriggered
+      ? `Kích hoạt Output Floor 72.5%: RWA hiệu dụng = ${fmtNum(res.effectiveRwa, 1)}`
+      : `RWA hiệu dụng (IRB): ${fmtNum(res.effectiveRwa, 1)}`;
+    $("res_b3_lev").textContent = fmtPct(res.leverageRatio, 2);
+    $("res_b3_levStatus").textContent = res.checks.levPass ? "Đạt chuẩn Leverage ≥ 3.0%" : "Dưới chuẩn Leverage (< 3.0%)";
+    $("res_b3_liq").textContent = `${fmtPct(res.lcr, 1)} / ${fmtPct(res.nsfr, 1)}`;
+    $("res_b3_liqStatus").textContent = (res.checks.lcrPass && res.checks.nsfrPass) ? "LCR & NSFR đều đạt ≥ 100%" : "Cảnh báo thanh khoản Basel III";
+
+    const badge = $("b3OverallBadge");
+    badge.textContent = res.allPass ? "ĐẠT TRỌN BỘ CHUẨN BASEL III" : "CÓ CHỈ TIÊU DƯỚI CHUẨN BASEL III";
+    badge.className = `badge ${res.allPass ? "badge-success" : "badge-danger"}`;
+
+    renderChart("chartBaselIII", {
+      type: "bar",
+      data: {
+        labels: ["CET1 (%)", "Tier 1 (%)", "Total CAR (%)", "Leverage (%)", "LCR (÷10 %)", "NSFR (÷10 %)"],
+        datasets: [
+          {
+            label: "Thực tế ngân hàng",
+            data: [
+              +(res.cet1Ratio * 100).toFixed(2),
+              +(res.tier1Ratio * 100).toFixed(2),
+              +(res.totalCar * 100).toFixed(2),
+              +(res.leverageRatio * 100).toFixed(2),
+              +(res.lcr * 10).toFixed(2),
+              +(res.nsfr * 10).toFixed(2)
+            ],
+            backgroundColor: "#1d4ed8"
+          },
+          {
+            label: "Ngưỡng tối thiểu Basel III",
+            data: [
+              +(res.reqCet1 * 100).toFixed(2),
+              +(res.reqTier1 * 100).toFixed(2),
+              +(res.reqTotal * 100).toFixed(2),
+              3.0,
+              10.0,
+              10.0
+            ],
+            backgroundColor: "rgba(220, 38, 38, 0.35)",
+            borderColor: "#dc2626",
+            borderWidth: 1.5
+          }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+  }
+
   // =========================================================================
   // TAB 6: DỰ ÁN, TRẢ NỢ & PHÂN LOẠI NỢ 5 NHÓM (NPL)
   // =========================================================================
@@ -1013,6 +1100,7 @@
       runConsumerUI();
       runTermStructureUI();
       runBaselUI();
+      runBaselIIIUI();
       runProjectUI();
       runNplUI();
       runInterestUI();
@@ -1052,6 +1140,7 @@
   global.runConsumerUI = runConsumerUI;
   global.runTermStructureUI = runTermStructureUI;
   global.runBaselUI = runBaselUI;
+  global.runBaselIIIUI = runBaselIIIUI;
   global.runProjectUI = runProjectUI;
   global.runNplUI = runNplUI;
   global.runInterestUI = runInterestUI;
@@ -1063,6 +1152,7 @@
     activeDataset = Sample.generateHomeCreditSample(1500, 2026);
     initCorporateInputs();
     initBaselInputs();
+    initBaselIIIInputs();
     initProjectInputs();
     initCh2Inputs();
     initCh34Inputs();
