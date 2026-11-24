@@ -5,6 +5,8 @@
   const Engine = global.CreditModelsEngine;
   const BankEngine = global.BankRiskEngine;
   const Sample = global.CreditSampleData;
+  const Narrative = global.NarrativeEngine;
+  const liveState = {};
 
   const charts = {};
   let activeDataset = [];
@@ -21,6 +23,32 @@
     if (!el) return;
     el.textContent = text;
     el.className = `status-msg status-${type}`;
+  }
+
+
+  function toggleInsights() {
+    const hidden = document.body.classList.toggle("hide-insights");
+    const btn = $("btnToggleInsights");
+    if (btn) btn.textContent = hidden ? "📝 Hiện thuyết minh" : "📝 Ẩn thuyết minh";
+  }
+
+  function refreshOverviewInsight() {
+    const el = $("insight_overview");
+    if (el && Narrative) el.innerHTML = Narrative.explainOverview(liveState);
+  }
+
+  function refreshBaselInsight() {
+    const el = $("insight_basel_all");
+    if (el && Narrative && liveState.ts && liveState.irb && liveState.b3) {
+      el.innerHTML = Narrative.explainBaselAll(liveState.ts, liveState.irb, liveState.b3);
+    }
+  }
+
+  function refreshProjectNplInsight() {
+    const el = $("insight_project_npl");
+    if (el && Narrative && liveState.pf && liveState.rep && liveState.npl) {
+      el.innerHTML = Narrative.explainProjectAndNpl(liveState.pf, liveState.rep, liveState.npl, $("pf_r").value);
+    }
   }
 
   function renderChart(canvasId, config) {
@@ -146,6 +174,7 @@
       };
       const res = Engine.runCreditScorecardPipeline(activeDataset, opts);
       lastScorecardResult = res;
+      liveState.sc = res;
 
       // KPIs
       $("scGini").textContent = `${fmtPct(res.trainMetrics.gini, 1)} / ${fmtPct(res.valMetrics.gini, 1)}`;
@@ -328,6 +357,8 @@
     $("cutApproval").textContent = `${fmtPct(sim.approvalRate, 1)} (${sim.approved}/${sim.total} KH)`;
     $("cutBadRate").textContent = fmtPct(sim.approvedBadRate, 2);
     $("cutCapture").textContent = fmtPct(sim.rejectedBadsCapture, 1);
+    if ($("insight_scorecard") && Narrative) $("insight_scorecard").innerHTML = Narrative.explainScorecard(lastScorecardResult, sim, cutoff);
+    refreshOverviewInsight();
   }
 
   // =========================================================================
@@ -367,6 +398,7 @@
     qualState.c6[key] = Number(val);
     if ($("qv_" + key)) $("qv_" + key).textContent = val;
     renderQualitativeChart();
+    if (liveState.corp && $("insight_corporate") && Narrative) $("insight_corporate").innerHTML = Narrative.explainCorporate(liveState.corp, qualState);
   }
 
   function renderQualitativeChart() {
@@ -452,6 +484,9 @@
         ["Thị trường", "P/B (lần)", fmtNum(r.market.pb, 2) + "x"]
       ];
       $("tblCorpRatios").innerHTML = rows.map(row => `<tr><td>${row[0]}</td><td>${row[1]}</td><td class="num"><strong>${row[2]}</strong></td></tr>`).join("");
+      liveState.corp = res;
+      if ($("insight_corporate") && Narrative) $("insight_corporate").innerHTML = Narrative.explainCorporate(res, qualState);
+      refreshOverviewInsight();
       setStatus("corpStatus", "Đã tính xong", "ok");
     } catch (err) {
       setStatus("corpStatus", `Lỗi: ${err.message}`, "err");
@@ -480,6 +515,7 @@
 
     $("ovConsumerScore").textContent = `${res.total} / 43đ`;
     $("ovConsumerLimit").textContent = res.decision;
+    if ($("insight_consumer") && Narrative) $("insight_consumer").innerHTML = Narrative.explainConsumer(res, c);
 
     renderChart("chartConsumer", {
       type: "bar",
@@ -527,6 +563,8 @@
     `).join("");
 
     $("ovCumPd3").textContent = fmtPct(res.years[2].cumPD, 2);
+    liveState.ts = res;
+    refreshBaselInsight();
 
     renderChart("chartTermStruct", {
       type: "line",
@@ -558,6 +596,8 @@
 
     $("ovBaselRwa").textContent = `${res.RWA.toFixed(1)} Tr.`;
     $("ovBaselCap").textContent = `Vốn tối thiểu 8%: ${res.minCapital.toFixed(2)} Tr. (WCDR ${fmtPct(res.wcdr, 1)})`;
+    liveState.irb = res;
+    refreshBaselInsight();
 
     // Độ nhạy RWA theo PD (0.1% -> 10%)
     const pdGrid = [0.1, 0.5, 1, 2, 3, 5, 8, 10];
@@ -653,6 +693,9 @@
     const badge = $("b3OverallBadge");
     badge.textContent = res.allPass ? "ĐẠT TRỌN BỘ CHUẨN BASEL III" : "CÓ CHỈ TIÊU DƯỚI CHUẨN BASEL III";
     badge.className = `badge ${res.allPass ? "badge-success" : "badge-danger"}`;
+    liveState.b3 = res;
+    refreshBaselInsight();
+    refreshOverviewInsight();
 
     renderChart("chartBaselIII", {
       type: "bar",
@@ -743,6 +786,9 @@
 
     // Lịch trả nợ Cty X
     const rep = Engine.calculateRepaymentPlan(Sample.PRESETS.repayment);
+    liveState.pf = res;
+    liveState.rep = rep;
+    refreshProjectNplInsight();
     $("repaySummaryBadge").textContent = `Lãi thi công: ${fmtNum(rep.constructionInterest, 1)} Tr. | Tổng nợ nhận: ${fmtNum(rep.totalDebtStart, 1)} Tr. | DSCR: ${rep.dscr.toFixed(2)}x`;
     $("tblRepayment").innerHTML = rep.schedule.map(row => `
       <tr>
@@ -774,6 +820,9 @@
 
     $("ovNplRatio").textContent = fmtPct(res.nplRatio, 2);
     $("ovOverdueRatio").textContent = `Nợ quá hạn (N2–N5): ${fmtPct(res.overdueRatio, 2)}`;
+    liveState.npl = res;
+    refreshProjectNplInsight();
+    refreshOverviewInsight();
 
     renderChart("chartNpl", {
       type: "doughnut",
@@ -866,6 +915,7 @@
     $("ch2LshBadge").textContent = `LSHVBQ Tổng nguồn: ${fmtPct(res.avgLshvbq, 4)}/tháng | LS cho vay gợi ý (+0,18% lãi gộp): ${fmtPct(res.suggestedLendingRate, 4)}/tháng`;
     $("ovLshvbq").textContent = `${fmtPct(res.avgLshvbq, 3)}/th`;
     $("ovArbInfo").textContent = `LS vay gợi ý: ${fmtPct(res.suggestedLendingRate, 3)}/th`;
+    if ($("insight_interest") && Narrative) $("insight_interest").innerHTML = Narrative.explainInterest(res);
   }
 
   // =========================================================================
@@ -913,6 +963,9 @@
 
     $("ovDurDeltaE").textContent = `${res.duration.dE >= 0 ? "+" : ""}${res.duration.dE.toFixed(2)} Tr.`;
     $("ovGapNii").textContent = `CGAP 1Y: ${res.cgap1Y} | ΔNII: ${res.dNii1Y.toFixed(2)}`;
+    liveState.rr = res;
+    if ($("insight_raterisk") && Narrative) $("insight_raterisk").innerHTML = Narrative.explainRateRisk(res, $("rr_dR").value);
+    refreshOverviewInsight();
 
     $("tblGap").innerHTML = res.gapRows.map(g => `
       <tr>
@@ -1003,6 +1056,9 @@
 
     $("ovFxLiq").textContent = `${res.liquidity.immediateRatio.toFixed(2)}x / ${res.fx.netFxPos >= 0 ? "+" : ""}${res.fx.netFxPos}M`;
     $("ovFxSub").textContent = `FX P&L: ${(res.fx.fxPnlVnd / 1000).toFixed(1)} Tỷ | Net Liq: ${res.liquidity.netLiquidityPos >= 0 ? "+" : ""}${fmtNum(res.liquidity.netLiquidityPos, 0)}`;
+    liveState.fxliq = res;
+    if ($("insight_fxliq") && Narrative) $("insight_fxliq").innerHTML = Narrative.explainFxLiqSec(res, $("fx_shock").value);
+    refreshOverviewInsight();
 
     $("cmoSummaryBadge").textContent = `PV Trái phiếu IO (Lãi): ${fmtNum(res.cmo.pvIO, 1)} Tr. | PV Trái phiếu PO (Gốc): ${fmtNum(res.cmo.pvPO, 1)} Tr.`;
     $("tblCmo").innerHTML = res.cmo.cmoFlow.map(c => `
@@ -1071,6 +1127,9 @@
 
     $("ovCarCamel").textContent = `${fmtPct(res.car.riskBasedCar, 1)} / ${res.camel.composite.toFixed(1)}`;
     $("ovRoeRoa").textContent = `ROE: ${fmtPct(res.ratios.roe, 1)} | ROA: ${fmtPct(res.ratios.roa, 2)} | ${res.camel.camelGrade}`;
+    liveState.cc = res;
+    if ($("insight_carcamel") && Narrative) $("insight_carcamel").innerHTML = Narrative.explainCarCamel(res);
+    refreshOverviewInsight();
 
     // Đảo ngược thang (6 - score) để trên biểu đồ Radar điểm càng lớn ra ngoài càng tốt
     renderChart("chartCamel", {
@@ -1127,6 +1186,7 @@
 
   // Gắn toàn bộ hàm vào window để sự kiện inline HTML không bao giờ lỗi
   global.switchTab = switchTab;
+  global.toggleInsights = toggleInsights;
   global.scrollToBlock = scrollToBlock;
   global.runCreditRiskSuiteUI = runCreditRiskSuiteUI;
   global.runAllModels = runAllModels;
