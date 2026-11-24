@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+  <title>Crisk-boy</title>
+  <link rel="stylesheet" href="styles.css?v=2.1" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <h1>Crisk-boy</h1>
+      <p>Trọn bộ 10 Module tự động &amp; trực quan: Credit Scorecard 8 bước, Altman Z, Basel I/II, Phép đo Lãi suất &amp; Arbitrage, GAP/Duration/Convexity &amp; Phái sinh, Ngoại hối, Thanh khoản, Chứng khoán hóa CMO, CAR &amp; CAMEL</p>
+    </div>
+    <div class="header-actions">
+      <span class="version-badge">Crisk-boy v2.1</span>
+      <button class="btn btn-success" onclick="window.runAllModels()">▶ Chạy toàn bộ mô hình</button>
+      <button class="btn btn-outline" style="color:#0f172a;" onclick="window.exportSampleCSV()">⬇ Tải CSV mẫu</button>
+      <span id="globalStatus" class="status-msg status-info">Sẵn sàng</span>
+    </div>
+  </header>
+
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="tab-overview" onclick="window.switchTab('tab-overview', this)">1. Tổng quan &amp; Vòng đời</button>
+    <button class="tab-btn" data-tab="tab-scorecard" onclick="window.switchTab('tab-scorecard', this)">2. Credit Scorecard 8 Bước</button>
+    <button class="tab-btn" data-tab="tab-corporate" onclick="window.switchTab('tab-corporate', this)">3. Doanh nghiệp (Altman Z &amp; 6C/5P)</button>
+    <button class="tab-btn" data-tab="tab-consumer" onclick="window.switchTab('tab-consumer', this)">4. Điểm Tín dụng Tiêu dùng</button>
+    <button class="tab-btn" data-tab="tab-basel" onclick="window.switchTab('tab-basel', this)">5. Cấu trúc Kỳ hạn &amp; Basel I/II</button>
+    <button class="tab-btn" data-tab="tab-project" onclick="window.switchTab('tab-project', this)">6. Dự án, Trả nợ &amp; Nợ xấu (NPL)</button>
+    <button class="tab-btn" data-tab="tab-interest" onclick="window.switchTab('tab-interest', this)">7. Lãi suất, LSHVBQ &amp; Arbitrage (C2)</button>
+    <button class="tab-btn" data-tab="tab-raterisk" onclick="window.switchTab('tab-raterisk', this)">8. RR Lãi suất: GAP, Duration &amp; Phái sinh (C3–4)</button>
+    <button class="tab-btn" data-tab="tab-fxliq" onclick="window.switchTab('tab-fxliq', this)">9. Ngoại hối, Thanh khoản &amp; CMO (C5–7–9)</button>
+    <button class="tab-btn" data-tab="tab-carcamel" onclick="window.switchTab('tab-carcamel', this)">10. An toàn Vốn (CAR) &amp; CAMEL (C10–11)</button>
+  </nav>
+
+  <main class="main-wrap">
+    <!-- ==================== TAB 1: TỔNG QUAN ==================== -->
+    <section id="tab-overview" class="tab-panel active">
+      <div class="card">
+        <div class="card-header">
+          <h2>Bảng điều khiển Tổng hợp Tất cả Mô hình (Auto-Run)</h2>
+          <span class="badge badge-info">100% Tự động phía Client — Không cần cài đặt server</span>
+        </div>
+        <div class="grid-4" id="overviewKpiGrid">
+          <div class="kpi-card">
+            <div class="kpi-label">Scorecard Gini / KS (Val)</div>
+            <div class="kpi-value" id="ovGiniKs">--</div>
+            <div class="kpi-sub" id="ovScorecardMeta">Đang tính...</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Kiểm định Ổn định (PSI / HHI)</div>
+            <div class="kpi-value" id="ovPsiHhi">--</div>
+            <div class="kpi-sub" id="ovPsiStatus">--</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Altman Z-Score (DN SX)</div>
+            <div class="kpi-value" id="ovAltmanZ">--</div>
+            <div class="kpi-sub" id="ovAltmanZone">--</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Tín dụng Tiêu dùng (9–43đ)</div>
+            <div class="kpi-value" id="ovConsumerScore">--</div>
+            <div class="kpi-sub" id="ovConsumerLimit">--</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">PD Tích lũy 3 Năm (Term Struct.)</div>
+            <div class="kpi-value" id="ovCumPd3">--</div>
+            <div class="kpi-sub">Từ lãi suất thị trường &amp; TSĐB</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Basel II IRB — RWA / Vốn 8%</div>
+            <div class="kpi-value" id="ovBaselRwa">--</div>
+            <div class="kpi-sub" id="ovBaselCap">--</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Thẩm định Dự án (NPV / IRR)</div>
+            <div class="kpi-value" id="ovProjectNpv">--</div>
+            <div class="kpi-sub" id="ovProjectIrr">--</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Tỷ lệ Nợ xấu (NPL Nhóm 3–5)</div>
+            <div class="kpi-value" id="ovNplRatio">--</div>
+            <div class="kpi-sub" id="ovOverdueRatio">--</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">LSHVBQ Tổng nguồn (C2)</div>
+            <div class="kpi-value" id="ovLshvbq">--</div>
+            <div class="kpi-sub" id="ovArbInfo">--</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">RR Lãi suất ΔE Duration (C3)</div>
+            <div class="kpi-value" id="ovDurDeltaE">--</div>
+            <div class="kpi-sub" id="ovGapNii">--</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Ngoại hối &amp; Thanh khoản (C5–7)</div>
+            <div class="kpi-value" id="ovFxLiq">--</div>
+            <div class="kpi-sub" id="ovFxSub">--</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">An toàn Vốn CAR &amp; CAMEL (C10–11)</div>
+            <div class="kpi-value" id="ovCarCamel">--</div>
+            <div class="kpi-sub" id="ovRoeRoa">--</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>Vòng đời Tín dụng &amp; Kiến trúc Phân tích Dữ liệu (A-Card • B-Card • C-Card)</h3>
+        </div>
+        <div class="lifecycle-grid">
+          <div class="lifecycle-box lc-orig">
+            <h4>1. Khởi tạo Khoản vay (Origination — A-Card)</h4>
+            <ul>
+              <li>Chấm điểm tín dụng (Credit Scoring: PD, LGD, EAD, EL)</li>
+              <li>Kiểm tra CIC &amp; Phê duyệt tự động theo Cut-off</li>
+              <li>Thẩm định DN (Altman Z, 5 nhóm tỷ số, 6C/5P/CAMPARI)</li>
+              <li>Thẩm định Phương án vay (NPV, IRR, BCR, Điểm hòa vốn)</li>
+            </ul>
+          </div>
+          <div class="lifecycle-box lc-port">
+            <h4>2. Quản trị Danh mục (Portfolio — B-Card)</h4>
+            <ul>
+              <li>Chấm điểm hành vi (B-Score) &amp; Cảnh báo sớm (EWS)</li>
+              <li>Giám sát ổn định thang điểm (PSI, KS, HHI)</li>
+              <li>Phân loại nợ 5 nhóm, Trích lập dự phòng, NPL &amp; NQH</li>
+              <li>Tính vốn yêu cầu Basel I / II (Standardized, F-IRB, A-IRB)</li>
+            </ul>
+          </div>
+          <div class="lifecycle-box lc-coll">
+            <h4>3. Thu hồi &amp; Xử lý nợ (Collections — C-Card)</h4>
+            <ul>
+              <li>Chấm điểm thu hồi nợ (C-Score) &amp; Ước tính tổn thất (LGD)</li>
+              <li>Biện pháp khai thác (Workout) vs Thanh lý (Liquidation)</li>
+              <li>Lập kế hoạch trả nợ &amp; Đánh giá hệ số bao phủ nợ (DSCR)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>Nạp Dữ liệu Thực tế (CSV / Excel .xlsx) cho Credit Scorecard</h3>
+        </div>
+        <div id="dropzone" class="dropzone" onclick="document.getElementById('fileInput').click()">
+          <strong>Kéo &amp; thả file CSV hoặc Excel (.xlsx) vào đây</strong> hoặc bấm để chọn tệp<br/>
+          <small style="color:var(--text-muted);">Yêu cầu có cột mục tiêu <code>TARGET</code> (giá trị 0 = Tốt, 1 = Nợ xấu). Hệ thống tự động chia Train/Val, Binning WoE/IV, chạy Logistic, vẽ ROC/KS/Master Scale và tính PSI/HHI.</small>
+          <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="window.handleFileUpload(this.files[0])" />
+        </div>
+        <div style="margin-top:10px; display:flex; align-items:center; flex-wrap:wrap; gap:10px;">
+          <button class="btn btn-outline btn-sm" onclick="window.resetToSampleData()">↺ Dùng lại dữ liệu mẫu Home Credit (1.500 dòng)</button>
+          <span id="uploadStatus" class="status-msg status-info">Đang dùng bộ dữ liệu mẫu mô phỏng Home Credit (1.500 KH)</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: CREDIT SCORECARD 8 BƯỚC ==================== -->
+    <section id="tab-scorecard" class="tab-panel">
+      <div class="card">
+        <div class="card-header">
+          <h2>Cấu hình Thang điểm PDO &amp; Chạy Quy trình 8 Bước Tự động</h2>
+          <div>
+            <button class="btn btn-primary btn-sm" onclick="window.runScorecardUI()">▶ Chạy lại Scorecard</button>
+            <span id="scStatus" class="status-msg status-ok">Đã chạy xong</span>
+          </div>
+        </div>
+        <div class="grid-5">
+          <div class="form-group">
+            <label>Base Score (Điểm cơ sở)</label>
+            <input type="number" id="scBaseScore" value="600" step="10" />
+          </div>
+          <div class="form-group">
+            <label>Base Odds (Tỷ lệ Tốt/Xấu)</label>
+            <input type="number" id="scBaseOdds" value="50" step="5" />
+          </div>
+          <div class="form-group">
+            <label>PDO (Điểm nhân đôi Odds)</label>
+            <input type="number" id="scPdo" value="20" step="5" />
+          </div>
+          <div class="form-group">
+            <label>Ngưỡng lọc IV (Shortlist)</label>
+            <input type="number" id="scIvThresh" value="0.02" step="0.01" min="0" />
+          </div>
+          <div class="form-group">
+            <label>Tỷ lệ Train / Validation</label>
+            <select id="scTrainRatio">
+              <option value="0.7" selected>70% Train / 30% Val</option>
+              <option value="0.75">75% Train / 25% Val</option>
+              <option value="0.8">80% Train / 20% Val</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid-4" style="margin-top:8px;">
+          <div class="kpi-card">
+            <div class="kpi-label">Gini (Train / Validation)</div>
+            <div class="kpi-value" id="scGini">--</div>
+            <div class="kpi-sub" id="scAuc">AUC: --</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">KS Max Distance (Val)</div>
+            <div class="kpi-value" id="scKs">--</div>
+            <div class="kpi-sub" id="scKsPos">Vị trí tách đỉnh: --</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">PSI (Ổn định quần thể)</div>
+            <div class="kpi-value" id="scPsi">--</div>
+            <div class="kpi-sub" id="scPsiBadge">--</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">HHI (Độ tập trung hạng)</div>
+            <div class="kpi-value" id="scHhi">--</div>
+            <div class="kpi-sub" id="scHhiBadge">--</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Biểu đồ ROC & KS (Khớp chính xác mẫu ảnh phân tách ROC/KS) -->
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><h3>Đường cong ROC (AUC &amp; Chỉ số Gini — Validation)</h3></div>
+          <div class="chart-box"><canvas id="chartRoc"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Biểu đồ phân tách KS (Cum. Bads vs Cum. Goods)</h3></div>
+          <div class="chart-box"><canvas id="chartKs"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Biểu đồ Master Scale 10 Hạng rủi ro & Bộ giả lập Cut-off -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Phổ Hạng Tín Dụng — Master Scale 10 Hạng (Volume &amp; Bad Rate %)</h3>
+          <span class="badge badge-info">Grade 01 (Rủi ro thấp nhất) → Grade 10 (Rủi ro cao nhất)</span>
+        </div>
+        <div class="chart-box"><canvas id="chartMasterScale"></canvas></div>
+        <div class="note-box">
+          <strong>Mô phỏng điểm cắt phê duyệt (Cut-off Simulator trên tập Validation):</strong>
+          <div class="range-row" style="margin-top:8px;">
+            <span>Điểm cắt (Cut-off): <strong id="cutoffValLabel">500</strong></span>
+            <input type="range" id="cutoffSlider" min="300" max="800" value="500" oninput="window.updateCutoffUI()" />
+          </div>
+          <div class="grid-3" style="margin-top:10px;">
+            <div>Tỷ lệ Phê duyệt (Approval Rate): <strong id="cutApproval">--</strong></div>
+            <div>Tỷ lệ Nợ xấu sau duyệt (Approved Bad Rate): <strong id="cutBadRate">--</strong></div>
+            <div>Tỷ lệ Chặn được Nợ xấu (Bads Captured): <strong id="cutCapture">--</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WoE/IV Chart + Multivariate Table -->
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><h3>Xếp hạng Sức mạnh Dự báo — Information Value (IV)</h3></div>
+          <div class="chart-box-sm"><canvas id="chartIv"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Phân tích Đa biến (Logistic Regression &amp; Kiểm tra Đa cộng tuyến VIF)</h3></div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Biến (Feature)</th>
+                  <th class="num">IV</th>
+                  <th>Xu hướng</th>
+                  <th class="num">Hệ số β (Logit)</th>
+                  <th class="num">VIF</th>
+                </tr>
+              </thead>
+              <tbody id="tblMultivariate"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Thẻ điểm chi tiết theo Bin -->
+      <div class="card">
+        <div class="card-header"><h3>Thẻ điểm Chi tiết theo Bin (Detailed Scorecard Points)</h3></div>
+        <div class="table-wrap" style="max-height:360px; overflow-y:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Biến (Feature)</th>
+                <th>Nhóm (Bin)</th>
+                <th class="num">Số lượng</th>
+                <th class="num">Tỷ lệ Bad (%)</th>
+                <th class="num">WoE</th>
+                <th class="num">Điểm (Points)</th>
+              </tr>
+            </thead>
+            <tbody id="tblScorecardBins"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: DOANH NGHIỆP (ALTMAN Z & TỶ SỐ & 6C/5P) ==================== -->
+    <section id="tab-corporate" class="tab-panel">
+      <div class="card">
+        <div class="card-header">
+          <h2>Nhập liệu Báo cáo Tài chính Doanh nghiệp (Đơn vị: Triệu VND)</h2>
+          <div>
+            <button class="btn btn-primary btn-sm" onclick="window.runCorporateUI()">▶ Tính Altman Z &amp; 5 Nhóm Tỷ số</button>
+            <span id="corpStatus" class="status-msg status-ok">Đã cập nhật</span>
+          </div>
+        </div>
+        <div class="grid-4">
+          <div class="form-group"><label>Tài sản ngắn hạn (Current Assets)</label><input type="number" id="c_ca" /></div>
+          <div class="form-group"><label>Hàng tồn kho (Inventories)</label><input type="number" id="c_inv" /></div>
+          <div class="form-group"><label>Tiền &amp; Tương đương tiền (Cash)</label><input type="number" id="c_cash" /></div>
+          <div class="form-group"><label>Nợ ngắn hạn (Current Liabilities)</label><input type="number" id="c_cl" /></div>
+          <div class="form-group"><label>Tổng Tài sản (Total Assets)</label><input type="number" id="c_ta" /></div>
+          <div class="form-group"><label>Tổng Nợ phải trả (Total Liabilities)</label><input type="number" id="c_tl" /></div>
+          <div class="form-group"><label>Nợ dài hạn (Long-term Debt)</label><input type="number" id="c_ltd" /></div>
+          <div class="form-group"><label>Vốn chủ sở hữu (Total Equity)</label><input type="number" id="c_eq" /></div>
+          <div class="form-group"><label>Lợi nhuận giữ lại (Retained Earnings)</label><input type="number" id="c_re" /></div>
+          <div class="form-group"><label>Doanh thu thuần (Sales)</label><input type="number" id="c_sales" /></div>
+          <div class="form-group"><label>Giá vốn hàng bán (COGS)</label><input type="number" id="c_cogs" /></div>
+          <div class="form-group"><label>Phải thu bình quân (Receivables)</label><input type="number" id="c_rec" /></div>
+          <div class="form-group"><label>EBIT (LN trước thuế &amp; lãi vay)</label><input type="number" id="c_ebit" /></div>
+          <div class="form-group"><label>Chi phí lãi vay (Interest)</label><input type="number" id="c_int" /></div>
+          <div class="form-group"><label>Lợi nhuận sau thuế (Net Income)</label><input type="number" id="c_ni" /></div>
+          <div class="form-group"><label>Thị giá Vốn hóa (Market Value Equity)</label><input type="number" id="c_mve" /></div>
+          <div class="form-group"><label>Số lượng Cổ phiếu (nghìn CP)</label><input type="number" id="c_shares" /></div>
+          <div class="form-group"><label>Giá Cổ phiếu (nghìn VND)</label><input type="number" id="c_price" /></div>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-header"><h3>Mô hình 1: Altman Z (DN CPH — Ngành SX)</h3></div>
+          <div class="kpi-value" id="resZ">--</div>
+          <div id="resZBadge"></div>
+          <p class="kpi-sub" style="margin-top:8px;">Ngưỡng: &gt;2.99 An toàn | 1.8–2.99 Cảnh báo | ≤1.8 Nguy hiểm</p>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Mô hình 2: Altman Z' (DN chưa CPH — SX)</h3></div>
+          <div class="kpi-value" id="resZp">--</div>
+          <div id="resZpBadge"></div>
+          <p class="kpi-sub" style="margin-top:8px;">Ngưỡng: &gt;2.9 An toàn | 1.23–2.9 Cảnh báo | ≤1.23 Nguy hiểm</p>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Mô hình 3: Altman Z'' (DN Phi SX / Khác)</h3></div>
+          <div class="kpi-value" id="resZpp">--</div>
+          <div id="resZppBadge"></div>
+          <p class="kpi-sub" style="margin-top:8px;">Ngưỡng: &gt;2.6 An toàn | 1.2–2.6 Cảnh báo | ≤1.1 Nguy hiểm</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><h3>Biểu đồ So sánh 3 Phiên bản Altman Z-Score</h3></div>
+          <div class="chart-box-sm"><canvas id="chartAltman"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>5 Nhóm Chỉ tiêu Tài chính Cổ điển</h3></div>
+          <div class="table-wrap" style="max-height:260px; overflow-y:auto;">
+            <table>
+              <thead><tr><th>Nhóm</th><th>Chỉ tiêu</th><th class="num">Giá trị</th></tr></thead>
+              <tbody id="tblCorpRatios"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>Phân tích Định tính Tín dụng (Tiêu chuẩn 6C • 5P • CAMPARI — Thang điểm 1–10)</h3>
+          <span id="qualSummaryBadge" class="badge badge-info">--</span>
+        </div>
+        <div class="grid-2">
+          <div id="qualSlidersWrap"></div>
+          <div class="chart-box-sm"><canvas id="chartQualitative"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 4: TÍN DỤNG TIÊU DÙNG ==================== -->
+    <section id="tab-consumer" class="tab-panel">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <h2>Mô hình Điểm số Tín dụng Tiêu dùng (8 Hạng mục)</h2>
+            <span class="badge badge-info">Thang 9 – 43 điểm</span>
+          </div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label>1. Nghề nghiệp của người vay</label>
+              <select id="con_job" onchange="window.runConsumerUI()">
+                <option value="10">Chuyên gia / Phụ trách KD (10đ)</option>
+                <option value="8">CN có kinh nghiệm tay nghề cao (8đ)</option>
+                <option value="7">Nhân viên văn phòng (7đ)</option>
+                <option value="5">Sinh viên (5đ)</option>
+                <option value="4">CN không có kinh nghiệm (4đ)</option>
+                <option value="2">CN bán thất nghiệp (2đ)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>2. Trạng thái nhà ở</label>
+              <select id="con_housing" onchange="window.runConsumerUI()">
+                <option value="6">Nhà riêng (6đ)</option>
+                <option value="4">Nhà thuê hay căn hộ (4đ)</option>
+                <option value="2">Sống cùng bạn hay người thân (2đ)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>3. Xếp hạng tín dụng (CIC)</label>
+              <select id="con_rating" onchange="window.runConsumerUI()">
+                <option value="10">Tốt (10đ)</option>
+                <option value="5">Trung bình (5đ)</option>
+                <option value="2">Không có hồ sơ (2đ)</option>
+                <option value="0">Tồi (0đ)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>4. Kinh nghiệm nghề nghiệp</label>
+              <select id="con_exp" onchange="window.runConsumerUI()">
+                <option value="5">Nhiều hơn 1 năm (5đ)</option>
+                <option value="2">Từ 1 năm trở xuống (2đ)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>5. Thời gian sống tại địa chỉ hiện hành</label>
+              <select id="con_res" onchange="window.runConsumerUI()">
+                <option value="2">Nhiều hơn 1 năm (2đ)</option>
+                <option value="1">Từ 1 năm trở xuống (1đ)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>6. Điện thoại cố định</label>
+              <select id="con_phone" onchange="window.runConsumerUI()">
+                <option value="2">Có (2đ)</option>
+                <option value="0">Không có (0đ)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>7. Số người sống cùng (phụ thuộc)</label>
+              <select id="con_dep" onchange="window.runConsumerUI()">
+                <option value="3">Không (3đ)</option>
+                <option value="3">Một người (3đ)</option>
+                <option value="4" selected>Hai người (4đ)</option>
+                <option value="4">Ba người (4đ)</option>
+                <option value="2">Nhiều hơn ba người (2đ)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>8. Các tài khoản tại Ngân hàng</label>
+              <select id="con_bank" onchange="window.runConsumerUI()">
+                <option value="4">Cả TK tiết kiệm &amp; phát hành séc (4đ)</option>
+                <option value="3">Chỉ TK tiết kiệm (3đ)</option>
+                <option value="2">Chỉ TK phát hành séc (2đ)</option>
+                <option value="0">Không có (0đ)</option>
+              </select>
+            </div>
+          </div>
+          <div class="note-box" style="margin-top:14px;">
+            <div style="font-size:1.1rem;">Tổng điểm khách hàng: <strong id="conTotalScore">--</strong> / 43 điểm</div>
+            <div style="margin-top:6px;">Quyết định tín dụng: <span id="conDecisionBadge" class="badge badge-success">--</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Biểu đồ Cấu thành Điểm Tín dụng Tiêu dùng</h3></div>
+          <div class="chart-box"><canvas id="chartConsumer"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 5: CẤU TRÚC KỲ HẠN & BASEL I / II ==================== -->
+    <section id="tab-basel" class="tab-panel">
+      <div class="grid-2">
+        <!-- Term Structure -->
+        <div class="card">
+          <div class="card-header">
+            <h2>1. Mô hình Cấu trúc Kỳ hạn RRTD (Term Structure)</h2>
+            <button class="btn btn-primary btn-sm" onclick="window.runTermStructureUI()">▶ Tính PD Tích lũy</button>
+          </div>
+          <div class="grid-3">
+            <div class="form-group"><label>LS TP Chính phủ 1Y (i1 %)</label><input type="number" id="ts_i1" step="0.1" /></div>
+            <div class="form-group"><label>LS TP Chính phủ 2Y (i2 %)</label><input type="number" id="ts_i2" step="0.1" /></div>
+            <div class="form-group"><label>LS TP Chính phủ 3Y (i3 %)</label><input type="number" id="ts_i3" step="0.1" /></div>
+            <div class="form-group"><label>LS Tín dụng DN 1Y (k1 %)</label><input type="number" id="ts_k1" step="0.1" /></div>
+            <div class="form-group"><label>LS Tín dụng DN 2Y (k2 %)</label><input type="number" id="ts_k2" step="0.1" /></div>
+            <div class="form-group"><label>LS Tín dụng DN 3Y (k3 %)</label><input type="number" id="ts_k3" step="0.1" /></div>
+          </div>
+          <div class="form-group">
+            <label>Hệ số thu hồi TSĐB khi vỡ nợ β (%) — Mặc định 0% (không TSĐB)</label>
+            <input type="number" id="ts_beta" step="5" min="0" max="95" />
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Năm</th><th class="num">LS Phi RR (f)</th><th class="num">LS DN (c)</th><th class="num">Risk Premium</th><th class="num">PD năm</th><th class="num">PD Tích lũy (Cp)</th></tr></thead>
+              <tbody id="tblTermStruct"></tbody>
+            </table>
+          </div>
+          <div class="chart-box-sm" style="margin-top:12px;"><canvas id="chartTermStruct"></canvas></div>
+        </div>
+
+        <!-- Basel II IRB -->
+        <div class="card">
+          <div class="card-header">
+            <h2>2. Basel II — Phương pháp Đánh giá Nội bộ (F-IRB / A-IRB)</h2>
+            <button class="btn btn-primary btn-sm" onclick="window.runBaselUI()">▶ Tính RWA &amp; Vốn</button>
+          </div>
+          <div class="grid-2">
+            <div class="form-group"><label>Dư nợ tại thời điểm vỡ nợ — EAD (Tr. USD)</label><input type="number" id="b_ead" step="10" /></div>
+            <div class="form-group"><label>Xác suất vỡ nợ — PD (%)</label><input type="number" id="b_pd" step="0.05" min="0.03" max="50" /></div>
+            <div class="form-group"><label>Tỷ lệ tổn thất ước tính — LGD (%)</label><input type="number" id="b_lgd" step="5" min="5" max="100" /></div>
+            <div class="form-group"><label>Kỳ hạn nợ trung bình — M (Năm, 1–5)</label><input type="number" id="b_m" step="0.5" min="1" max="5" /></div>
+          </div>
+          <div class="grid-3" style="margin-top:8px;">
+            <div class="kpi-card"><div class="kpi-label">Hệ số tương quan (ρ)</div><div class="kpi-value" id="b_rho">--</div></div>
+            <div class="kpi-card"><div class="kpi-label">Kỳ hạn hiệu chỉnh (MA)</div><div class="kpi-value" id="b_ma">--</div></div>
+            <div class="kpi-card"><div class="kpi-label">WCDR (99.9%)</div><div class="kpi-value" id="b_wcdr">--</div></div>
+            <div class="kpi-card"><div class="kpi-label">Tổn thất kỳ vọng (EL)</div><div class="kpi-value" id="b_el">--</div></div>
+            <div class="kpi-card"><div class="kpi-label">RWA (IRB)</div><div class="kpi-value" id="b_rwa">--</div></div>
+            <div class="kpi-card"><div class="kpi-label">Vốn tối thiểu (8% RWA)</div><div class="kpi-value" id="b_cap">--</div></div>
+          </div>
+          <div class="chart-box-sm" style="margin-top:12px;"><canvas id="chartBaselSens"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Basel Standardized Table -->
+      <div class="card">
+        <div class="card-header">
+          <h3>3. Basel I &amp; II — Phương pháp Chuẩn hóa (Standardized Approach)</h3>
+          <span id="baselSaSummary" class="badge badge-info">--</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Khoản mục Tài sản có</th><th class="num">Giá trị (Tr. USD)</th><th class="num">Trọng số RR (%)</th><th class="num">RWA (Tr. USD)</th><th class="num">Vốn tối thiểu 8%</th></tr></thead>
+            <tbody id="tblBaselSA"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 6: DỰ ÁN, TRẢ NỢ & NỢ XẤU (NPL) ==================== -->
+    <section id="tab-project" class="tab-panel">
+      <div class="grid-2">
+        <!-- Project Finance: NPV, IRR, BCR, BEP -->
+        <div class="card">
+          <div class="card-header">
+            <h2>1. Thẩm định Dự án (NPV, IRR, BCR &amp; Điểm hòa vốn)</h2>
+            <button class="btn btn-primary btn-sm" onclick="window.runProjectUI()">▶ Tính hiệu quả DA</button>
+          </div>
+          <div class="grid-2">
+            <div class="form-group"><label>Lãi suất chiết khấu r (%/năm)</label><input type="number" id="pf_r" step="0.5" /></div>
+            <div class="form-group"><label>Dòng tiền các năm (cách nhau dấu phẩy)</label><input type="text" id="pf_cfs" /></div>
+            <div class="form-group"><label>Chi phí cố định F (Tr. VND)</label><input type="number" id="pf_f" /></div>
+            <div class="form-group"><label>Giá bán đơn vị P (Tr. VND)</label><input type="number" id="pf_p" /></div>
+            <div class="form-group"><label>Biến phí đơn vị Vu (Tr. VND)</label><input type="number" id="pf_vu" /></div>
+            <div class="form-group"><label>Sản lượng kỳ Q (đơn vị)</label><input type="number" id="pf_q" /></div>
+          </div>
+          <div class="grid-3" style="margin-top:8px;">
+            <div class="kpi-card"><div class="kpi-label">NPV (Tr. VND)</div><div class="kpi-value" id="res_npv">--</div></div>
+            <div class="kpi-card"><div class="kpi-label">IRR (%/năm)</div><div class="kpi-value" id="res_irr">--</div></div>
+            <div class="kpi-card"><div class="kpi-label">Chỉ số BCR</div><div class="kpi-value" id="res_bcr">--</div></div>
+            <div class="kpi-card"><div class="kpi-label">Sản lượng HV (Qhv)</div><div class="kpi-value" id="res_qhv">--</div></div>
+            <div class="kpi-card"><div class="kpi-label">Doanh thu HV (DThv)</div><div class="kpi-value" id="res_dthv">--</div></div>
+            <div class="kpi-card"><div class="kpi-label">Thời điểm HV (Ngày)</div><div class="kpi-value" id="res_thv">--</div></div>
+          </div>
+          <div class="chart-box-sm" style="margin-top:12px;"><canvas id="chartBep"></canvas></div>
+        </div>
+
+        <!-- 5-Group Debt Classification & NPL -->
+        <div class="card">
+          <div class="card-header">
+            <h2>2. Phân loại Nợ 5 Nhóm, Tỷ lệ Nợ xấu (NPL) &amp; Hiệu suất SDV</h2>
+            <button class="btn btn-primary btn-sm" onclick="window.runNplUI()">▶ Đánh giá Danh mục</button>
+          </div>
+          <div class="grid-3">
+            <div class="form-group"><label>Nhóm 1 — Đủ tiêu chuẩn</label><input type="number" id="npl_g1" /></div>
+            <div class="form-group"><label>Nhóm 2 — Cần chú ý</label><input type="number" id="npl_g2" /></div>
+            <div class="form-group"><label>Nhóm 3 — Dưới tiêu chuẩn</label><input type="number" id="npl_g3" /></div>
+            <div class="form-group"><label>Nhóm 4 — Nghi ngờ</label><input type="number" id="npl_g4" /></div>
+            <div class="form-group"><label>Nhóm 5 — Có KN mất vốn</label><input type="number" id="npl_g5" /></div>
+            <div class="form-group"><label>Tổng vốn huy động</label><input type="number" id="npl_dep" /></div>
+          </div>
+          <div class="grid-3" style="margin-top:8px;">
+            <div class="kpi-card"><div class="kpi-label">Tỷ lệ Nợ xấu (NPL)</div><div class="kpi-value" id="res_npl">--</div></div>
+            <div class="kpi-card"><div class="kpi-label">Tỷ lệ Nợ quá hạn</div><div class="kpi-value" id="res_overdue">--</div></div>
+            <div class="kpi-card"><div class="kpi-label">Hiệu suất SDV (H1)</div><div class="kpi-value" id="res_h1">--</div></div>
+          </div>
+          <div class="chart-box-sm" style="margin-top:12px;"><canvas id="chartNpl"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Kế hoạch trả nợ & Lãi thi công (Ví dụ Cty X) -->
+      <div class="card">
+        <div class="card-header">
+          <h3>3. Kế hoạch Trả nợ Khoản vay Dự án &amp; Lãi thi công (Bài toán Cty X — 5 đợt giải ngân)</h3>
+          <span id="repaySummaryBadge" class="badge badge-info">--</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Kỳ trả nợ</th>
+                <th class="num">Dư nợ đầu kỳ</th>
+                <th class="num">Trả gốc định kỳ</th>
+                <th class="num">Trả lãi (dư nợ giảm dần)</th>
+                <th class="num">Tổng gốc + lãi</th>
+                <th class="num">Dư nợ cuối kỳ</th>
+              </tr>
+            </thead>
+            <tbody id="tblRepayment"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 7: LÃI SUẤT, LSHVBQ & ARBITRAGE (CHƯƠNG 2) ==================== -->
+    <section id="tab-interest" class="tab-panel">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <h2>1. Lãi đơn, Lãi kép, Lãi thực trả &amp; Trả góp (Chương 2)</h2>
+            <button class="btn btn-primary btn-sm" onclick="window.runInterestUI()">▶ Tính Chương 2</button>
+          </div>
+          <div class="grid-2">
+            <div class="form-group"><label>Số tiền gốc P0 (Tr. VND)</label><input type="number" id="ch2_p0" /></div>
+            <div class="form-group"><label>Lãi suất danh nghĩa r (%/năm)</label><input type="number" id="ch2_r" step="0.5" /></div>
+            <div class="form-group"><label>Kỳ hạn t (năm)</label><input type="number" id="ch2_t" step="1" min="1" /></div>
+            <div class="form-group"><label>Số lần ghép lãi / năm (n)</label><input type="number" id="ch2_n" step="1" min="1" /></div>
+          </div>
+          <div class="grid-2" style="margin-top:8px;">
+            <div class="kpi-card"><div class="kpi-label">Giá trị đáo hạn Lãi đơn</div><div class="kpi-value" id="res_ch2_simple">--</div></div>
+            <div class="kpi-card"><div class="kpi-label">Giá trị đáo hạn Lãi kép</div><div class="kpi-value" id="res_ch2_comp">--</div></div>
+            <div class="kpi-card"><div class="kpi-label">Lãi suất thực trả (r_e)</div><div class="kpi-value" id="res_ch2_eff">--</div></div>
+            <div class="kpi-card"><div class="kpi-label">Trả góp đều mỗi kỳ (C)</div><div class="kpi-value" id="res_ch2_inst">--</div></div>
+          </div>
+          <div class="sub-title">Lịch trả góp (Gốc &amp; Lãi theo kỳ)</div>
+          <div class="table-wrap" style="max-height:200px; overflow-y:auto;">
+            <table>
+              <thead><tr><th>Kỳ</th><th class="num">Khoản trả C</th><th class="num">Trả lãi</th><th class="num">Trả gốc</th><th class="num">Dư nợ còn lại</th></tr></thead>
+              <tbody id="tblCh2Amort"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>2. Dự báo Lãi suất (Zero-Coupon &amp; Forward) &amp; Arbitrage</h2>
+          </div>
+          <div class="grid-4">
+            <div class="form-group"><label>Coupon 1Y (%)</label><input type="number" id="ch2_r1" step="0.1" /></div>
+            <div class="form-group"><label>Coupon 2Y (%)</label><input type="number" id="ch2_r2" step="0.1" /></div>
+            <div class="form-group"><label>Coupon 3Y (%)</label><input type="number" id="ch2_r3" step="0.1" /></div>
+            <div class="form-group"><label>Coupon 4Y (%)</label><input type="number" id="ch2_r4" step="0.1" /></div>
+          </div>
+          <div class="chart-box-sm"><canvas id="chartYieldCurve"></canvas></div>
+
+          <div class="sub-title">Quy trình Arbitrage Lãi suất có Bảo hiểm (Mục 2.3)</div>
+          <div class="grid-5">
+            <div class="form-group"><label>LS Nội tệ R_T (%)</label><input type="number" id="ch2_arbRT" step="0.1" /></div>
+            <div class="form-group"><label>LS Ngoại tệ R_C (%)</label><input type="number" id="ch2_arbRC" step="0.1" /></div>
+            <div class="form-group"><label>Tỷ giá giao ngay S</label><input type="number" id="ch2_arbS" step="10" /></div>
+            <div class="form-group"><label>Tỷ giá kỳ hạn F</label><input type="number" id="ch2_arbF" step="10" /></div>
+            <div class="form-group"><label>Kỳ hạn (tháng)</label><input type="number" id="ch2_arbM" step="1" min="1" /></div>
+          </div>
+          <div class="note-box" id="res_ch2_arbBox">--</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>3. Bảng tính Lãi suất Hòa vốn Bình quân (LSHVBQ — Mục 1.7) &amp; Đề xuất Lãi suất Cho vay</h3>
+          <span id="ch2LshBadge" class="badge badge-info">--</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Kỳ hạn nguồn vốn</th>
+                <th class="num">LS huy động (%/th)</th>
+                <th class="num">Dự trữ BB (%)</th>
+                <th class="num">Hệ số SD vốn U (%)</th>
+                <th class="num">Tỷ trọng W (%)</th>
+                <th class="num">LSHVBQ kỳ hạn (%/th)</th>
+              </tr>
+            </thead>
+            <tbody id="tblCh2Lsh"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 8: RỦI RO LÃI SUẤT (CHƯƠNG 3 & 4) ==================== -->
+    <section id="tab-raterisk" class="tab-panel">
+      <div class="card">
+        <div class="card-header">
+          <h2>1. Tham số Cú sốc Lãi suất, Bảng cân đối Duration &amp; Phòng ngừa Phái sinh (Chương 3 &amp; 4)</h2>
+          <button class="btn btn-primary btn-sm" onclick="window.runRateRiskUI()">▶ Chạy Mô hình GAP, Duration &amp; Phái sinh</button>
+        </div>
+        <div class="grid-5">
+          <div class="form-group"><label>Biến động Lãi suất ΔR (%)</label><input type="number" id="rr_dR" step="0.25" /></div>
+          <div class="form-group"><label>Tổng Tài sản có A (Tr. USD)</label><input type="number" id="rr_A" /></div>
+          <div class="form-group"><label>Tổng Vốn huy động L (Tr. USD)</label><input type="number" id="rr_L" /></div>
+          <div class="form-group"><label>Thời lượng TSC — D_A (năm)</label><input type="number" id="rr_DA" step="0.1" /></div>
+          <div class="form-group"><label>Thời lượng TSN — D_L (năm)</label><input type="number" id="rr_DL" step="0.1" /></div>
+        </div>
+        <div class="grid-4" style="margin-top:8px;">
+          <div class="kpi-card"><div class="kpi-label">CGAP 1 Năm / ΔNII</div><div class="kpi-value" id="res_rr_cgap">--</div><div class="kpi-sub" id="res_rr_dnii">--</div></div>
+          <div class="kpi-card"><div class="kpi-label">Chênh lệch Thời lượng (D_A - k·D_L)</div><div class="kpi-value" id="res_rr_dgap">--</div><div class="kpi-sub" id="res_rr_immunize">--</div></div>
+          <div class="kpi-card"><div class="kpi-label">Biến động Vốn tự có (ΔE)</div><div class="kpi-value" id="res_rr_dE">--</div><div class="kpi-sub" id="res_rr_newE">--</div></div>
+          <div class="kpi-card"><div class="kpi-label">Độ lồi Trái phiếu 6Y (D / CX)</div><div class="kpi-value" id="res_rr_cx">--</div><div class="kpi-sub">So sánh sai số tuyến tính vs thực tế</div></div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><h3>Mô hình Định giá lại (Repricing GAP 6 Khung kỳ hạn — Bảng 3.1)</h3></div>
+          <div class="chart-box-sm"><canvas id="chartGap"></canvas></div>
+          <div class="table-wrap" style="margin-top:10px;">
+            <table>
+              <thead><tr><th>Khung kỳ hạn</th><th class="num">TSC nhạy cảm</th><th class="num">TSN nhạy cảm</th><th class="num">GAP</th><th class="num">CGAP tích lũy</th></tr></thead>
+              <tbody id="tblGap"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h3>Hiệu ứng Độ lồi (Convexity) — Giá Trái phiếu Thực tế vs Tuyến tính</h3></div>
+          <div class="chart-box"><canvas id="chartConvexity"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>2. Phòng ngừa Rủi ro Lãi suất bằng Phái sinh (Swap, Interest Rate Cap &amp; Collar — Chương 4)</h3>
+          <span id="rrDerivBadge" class="badge badge-info">--</span>
+        </div>
+        <div class="grid-5">
+          <div class="form-group"><label>Giá trị danh nghĩa (Tr. USD)</label><input type="number" id="rr_notional" /></div>
+          <div class="form-group"><label>LS Cố định Swap (%)</label><input type="number" id="rr_swapFix" step="0.25" /></div>
+          <div class="form-group"><label>LS Thả nổi hiện tại (%)</label><input type="number" id="rr_swapFlt" step="0.25" /></div>
+          <div class="form-group"><label>Lãi suất trần Cap (%)</label><input type="number" id="rr_cap" step="0.25" /></div>
+          <div class="form-group"><label>Lãi suất sàn Floor (%)</label><input type="number" id="rr_floor" step="0.25" /></div>
+        </div>
+        <div class="chart-box-sm" style="margin-top:10px;"><canvas id="chartDerivatives"></canvas></div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 9: NGOẠI HỐI, THANH KHOẢN & CHỨNG KHOÁN HÓA (C5, C7, C9) ==================== -->
+    <section id="tab-fxliq" class="tab-panel">
+      <div class="grid-2">
+        <!-- FX Risk -->
+        <div class="card">
+          <div class="card-header">
+            <h2>1. Lượng hóa Rủi ro Ngoại hối (Chương 5)</h2>
+            <button class="btn btn-primary btn-sm" onclick="window.runFxLiqSecUI()">▶ Tính C5 – C7 – C9</button>
+          </div>
+          <div class="grid-3">
+            <div class="form-group"><label>TSC Ngoại tệ (Tr. USD)</label><input type="number" id="fx_A" /></div>
+            <div class="form-group"><label>TSN Ngoại tệ (Tr. USD)</label><input type="number" id="fx_L" /></div>
+            <div class="form-group"><label>Ngoại tệ mua kỳ hạn</label><input type="number" id="fx_buy" /></div>
+            <div class="form-group"><label>Ngoại tệ bán kỳ hạn</label><input type="number" id="fx_sell" /></div>
+            <div class="form-group"><label>Tỷ giá giao ngay (VND/USD)</label><input type="number" id="fx_spot" step="100" /></div>
+            <div class="form-group"><label>Cú sốc tỷ giá (%)</label><input type="number" id="fx_shock" step="0.5" /></div>
+          </div>
+          <div class="grid-2" style="margin-top:8px;">
+            <div class="kpi-card"><div class="kpi-label">Trạng thái Ngoại tệ Ròng</div><div class="kpi-value" id="res_fx_net">--</div><div class="kpi-sub" id="res_fx_status">--</div></div>
+            <div class="kpi-card"><div class="kpi-label">Lãi / Lỗ quy đổi VND</div><div class="kpi-value" id="res_fx_pnl">--</div><div class="kpi-sub" id="res_fx_newspot">--</div></div>
+          </div>
+        </div>
+
+        <!-- Liquidity Risk -->
+        <div class="card">
+          <div class="card-header"><h2>2. Lượng hóa Rủi ro Thanh khoản (Chương 7)</h2></div>
+          <div class="grid-3">
+            <div class="form-group"><label>TSC thanh toán ngay</label><input type="number" id="liq_aNow" /></div>
+            <div class="form-group"><label>TSN thanh toán ngay</label><input type="number" id="liq_lNow" /></div>
+            <div class="form-group"><label>Tổng Dư nợ (Loans)</label><input type="number" id="liq_loans" /></div>
+            <div class="form-group"><label>Tiền gửi cốt lõi (Core Dep.)</label><input type="number" id="liq_core" /></div>
+            <div class="form-group"><label>Cung thanh khoản (Supply)</label><input type="number" id="liq_sup" /></div>
+            <div class="form-group"><label>Cầu thanh khoản (Demand)</label><input type="number" id="liq_dem" /></div>
+          </div>
+          <div class="grid-3" style="margin-top:8px;">
+            <div class="kpi-card"><div class="kpi-label">Tỷ lệ Chi trả ngay (≥1.0)</div><div class="kpi-value" id="res_liq_imm">--</div></div>
+            <div class="kpi-card"><div class="kpi-label">Độ lệch Tài trợ (Fin. Gap)</div><div class="kpi-value" id="res_liq_gap">--</div></div>
+            <div class="kpi-card"><div class="kpi-label">Trạng thái Thanh khoản Ròng</div><div class="kpi-value" id="res_liq_net">--</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Securitization CMO / IO / PO -->
+      <div class="card">
+        <div class="card-header">
+          <h3>3. Công nghệ Chứng khoán hóa — Mô phỏng Dòng tiền CMO (Hạng A, B, C) &amp; Tách IO / PO (Chương 9)</h3>
+          <span id="cmoSummaryBadge" class="badge badge-info">--</span>
+        </div>
+        <div class="grid-3">
+          <div class="form-group"><label>Quy mô Gói tài sản thế chấp (Tr. USD)</label><input type="number" id="cmo_pool" /></div>
+          <div class="form-group"><label>Lãi suất gói vay thế chấp (%/năm)</label><input type="number" id="cmo_rate" step="0.25" /></div>
+          <div class="form-group"><label>Tỷ lệ hoàn trả trước hạn — Prepayment (%/năm)</label><input type="number" id="cmo_prepay" step="1" /></div>
+        </div>
+        <div class="grid-2" style="margin-top:10px;">
+          <div class="chart-box-sm"><canvas id="chartCmo"></canvas></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Năm</th><th class="num">Lãi (IO)</th><th class="num">Gốc (PO)</th><th class="num">Trả Hạng A</th><th class="num">Trả Hạng B</th><th class="num">Trả Hạng C</th></tr></thead>
+              <tbody id="tblCmo"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 10: VỐN TỰ CÓ (CAR) & CAMEL (CHƯƠNG 10 & 11) ==================== -->
+    <section id="tab-carcamel" class="tab-panel">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <h2>1. Tỷ lệ An toàn Vốn (CAR — Nội bảng &amp; Ngoại bảng, Chương 10)</h2>
+            <button class="btn btn-primary btn-sm" onclick="window.runCarCamelUI()">▶ Tính CAR &amp; CAMEL</button>
+          </div>
+          <div class="grid-3">
+            <div class="form-group"><label>Vốn cấp 1 (Tier 1)</label><input type="number" id="cc_t1" /></div>
+            <div class="form-group"><label>Vốn cấp 2 (Tier 2)</label><input type="number" id="cc_t2" /></div>
+            <div class="form-group"><label>Khoản giảm trừ vốn</label><input type="number" id="cc_ded" /></div>
+            <div class="form-group"><label>TSC nội bảng RR 0%</label><input type="number" id="cc_on0" /></div>
+            <div class="form-group"><label>TSC nội bảng RR 20%</label><input type="number" id="cc_on20" /></div>
+            <div class="form-group"><label>TSC nội bảng RR 50%</label><input type="number" id="cc_on50" /></div>
+            <div class="form-group"><label>TSC nội bảng RR 100%</label><input type="number" id="cc_on100" /></div>
+            <div class="form-group"><label>Ngoại bảng CCF 100%</label><input type="number" id="cc_off100" /></div>
+            <div class="form-group"><label>Ngoại bảng CCF 50%</label><input type="number" id="cc_off50" /></div>
+          </div>
+          <div class="grid-3" style="margin-top:8px;">
+            <div class="kpi-card"><div class="kpi-label">Tổng RWA (Nội + Ngoại)</div><div class="kpi-value" id="res_car_rwa">--</div></div>
+            <div class="kpi-card"><div class="kpi-label">CAR Đơn giản</div><div class="kpi-value" id="res_car_simple">--</div></div>
+            <div class="kpi-card"><div class="kpi-label">CAR Chịu rủi ro (≥8%)</div><div class="kpi-value" id="res_car_risk">--</div><div class="kpi-sub" id="res_car_status">--</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>2. Hệ thống Chỉ tiêu &amp; Xếp hạng Ngân hàng CAMEL (Chương 11)</h2>
+            <span id="res_camel_badge" class="badge badge-success">--</span>
+          </div>
+          <div class="grid-3">
+            <div class="form-group"><label>Lợi nhuận sau thuế (NI)</label><input type="number" id="cc_ni" /></div>
+            <div class="form-group"><label>Thu nhập lãi thuần (NII)</label><input type="number" id="cc_nii" /></div>
+            <div class="form-group"><label>Tổng thu nhập HĐ (TOI)</label><input type="number" id="cc_opinc" /></div>
+            <div class="form-group"><label>Chi phí hoạt động (OpEx)</label><input type="number" id="cc_opexp" /></div>
+            <div class="form-group"><label>Tỷ lệ Nợ xấu NPL (%)</label><input type="number" id="cc_npl" step="0.1" /></div>
+            <div class="form-group"><label>Tỷ lệ TS thanh khoản (%)</label><input type="number" id="cc_liq" step="0.5" /></div>
+          </div>
+          <div class="grid-4" style="margin-top:8px;">
+            <div class="kpi-card"><div class="kpi-label">ROA</div><div class="kpi-value" id="res_cc_roa">--</div></div>
+            <div class="kpi-card"><div class="kpi-label">ROE (=ROA×EM)</div><div class="kpi-value" id="res_cc_roe">--</div></div>
+            <div class="kpi-card"><div class="kpi-label">NIM</div><div class="kpi-value" id="res_cc_nim">--</div></div>
+            <div class="kpi-card"><div class="kpi-label">CIR (Chi phí/TN)</div><div class="kpi-value" id="res_cc_cir">--</div></div>
+          </div>
+          <div class="chart-box-sm" style="margin-top:10px;"><canvas id="chartCamel"></canvas></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="sample_data.js?v=2.1"></script>
+  <script src="models_engine.js?v=2.1"></script>
+  <script src="bank_risk_engine.js?v=2.1"></script>
+  <script src="app.js?v=2.1"></script>
+</body>
+</html>
