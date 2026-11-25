@@ -1196,7 +1196,7 @@
     ["dragleave", "drop"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove("dragover"); }));
     dz.addEventListener("drop", e => {
       const f = e.dataTransfer?.files?.[0];
-      if (f) handleFileUpload(f);
+      if (f) { if (global.DataImporter) global.DataImporter.importAnyFile(f); else handleFileUpload(f); }
     });
     const pdfDz = $("pdfDropzone");
     if (pdfDz) {

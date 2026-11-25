@@ -1,4 +1,4 @@
-/* data_importer.js v2.8 — Nạp/Xuất 1 file Excel Tổng (All-in-One) & Quét tự động PDF BCTC Doanh nghiệp (PDF.js) */
+/* data_importer.js v2.9 — Nạp/Xuất 1 file Excel Tổng (All-in-One) & Quét tự động PDF BCTC Doanh nghiệp (PDF.js) */
 (function (global) {
   "use strict";
 
@@ -459,9 +459,44 @@
     }
   }
 
+
+  // =========================================================================
+  // 4. BỘ ĐỊNH TUYẾN THỐNG NHẤT (1 NÚT DUY NHẤT: EXCEL / CSV / PDF BCTC)
+  // =========================================================================
+  function importAnyFile(file) {
+    if (!file) return;
+    const name = (file.name || "").toLowerCase();
+    if (name.endsWith(".pdf") || file.type === "application/pdf") {
+      setStatus("globalStatus", `Đang quét PDF: ${file.name}...`, "info");
+      Promise.resolve(importPdfBCTC(file)).then(() => {
+        const pdfEl = $("pdfUploadStatus");
+        if (pdfEl) {
+          const isErr = pdfEl.className.includes("status-err");
+          setStatus("globalStatus", pdfEl.textContent, isErr ? "err" : "ok");
+          setStatus("uploadStatus", pdfEl.textContent, isErr ? "err" : "ok");
+        }
+      });
+    } else if (name.endsWith(".xlsx") || name.endsWith(".xls") || name.endsWith(".csv")) {
+      setStatus("globalStatus", `Đang nạp Excel/CSV: ${file.name}...`, "info");
+      importExcelWorkbook(file);
+      setTimeout(() => {
+        const upEl = $("uploadStatus");
+        if (upEl) {
+          const isErr = upEl.className.includes("status-err");
+          setStatus("globalStatus", upEl.textContent, isErr ? "err" : "ok");
+        }
+      }, 450);
+    } else {
+      const msg = "Định dạng chưa hỗ trợ. Vui lòng chọn file .xlsx, .xls, .csv hoặc .pdf.";
+      setStatus("globalStatus", msg, "err");
+      setStatus("uploadStatus", msg, "err");
+    }
+  }
+
   global.DataImporter = {
     exportAllInOneExcel,
     importExcelWorkbook,
-    importPdfBCTC
+    importPdfBCTC,
+    importAnyFile
   };
 })(window);
