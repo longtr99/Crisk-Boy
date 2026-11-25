@@ -1,4 +1,4 @@
-/* bi_dashboard.js v2.6 — Tab 0: Power BI + Data Analyst Executive Dashboard */
+/* bi_dashboard.js v2.7 — Tab 0: Power BI + Data Analyst Executive Dashboard */
 (function (global) {
   "use strict";
 
@@ -89,6 +89,19 @@
     $("bi_mkt_bar").className = `bi-progress-fill ${sMarket >= 70 ? "fill-ok" : (sMarket >= 45 ? "fill-warn" : "fill-bad")}`;
     $("bi_mkt_sub").textContent = `ΔE Duration | ROE dự kiến: ${fmtPct(roe, 1)}`;
 
+    // Tính trước dữ liệu lọc Master Scale ở phạm vi ngoài để dùng chung cho Biểu đồ & Thuyết minh
+    let filteredGrades = state.sc.masterScale.map((m, idx) => ({ ...m, idx }));
+    if (biFilters.gradeGroup === "safe") filteredGrades = filteredGrades.filter(m => m.idx <= 3);
+    else if (biFilters.gradeGroup === "mid") filteredGrades = filteredGrades.filter(m => m.idx >= 4 && m.idx <= 6);
+    else if (biFilters.gradeGroup === "high") filteredGrades = filteredGrades.filter(m => m.idx >= 7);
+
+    const totVol = filteredGrades.reduce((s, m) => s + m.total, 0);
+    const totBad = filteredGrades.reduce((s, m) => s + m.bads, 0);
+    const grpBadRate = totVol > 0 ? Math.min(0.99, (totBad / totVol) * scen.badRateMult) : 0;
+    if ($("biGradeFilterSummary")) {
+      $("biGradeFilterSummary").textContent = `Đang lọc ${filteredGrades.length} hạng: ${totVol.toLocaleString("vi-VN")} KH | Bad Rate bình quân: ${fmtPct(grpBadRate, 2)}`;
+    }
+
     // 2. Biểu đồ BI #1: Radar Sức khỏe 6 Trụ cột
     const renderChartFn = global.ChartStudio ? global.ChartStudio.render : null;
     if (renderChartFn) {
@@ -120,15 +133,6 @@
       });
 
       // 3. Biểu đồ BI #2: Cross-filtered Master Scale theo Grade Slicer
-      let filteredGrades = state.sc.masterScale.map((m, idx) => ({ ...m, idx }));
-      if (biFilters.gradeGroup === "safe") filteredGrades = filteredGrades.filter(m => m.idx <= 3);
-      else if (biFilters.gradeGroup === "mid") filteredGrades = filteredGrades.filter(m => m.idx >= 4 && m.idx <= 6);
-      else if (biFilters.gradeGroup === "high") filteredGrades = filteredGrades.filter(m => m.idx >= 7);
-
-      const totVol = filteredGrades.reduce((s, m) => s + m.total, 0);
-      const totBad = filteredGrades.reduce((s, m) => s + m.bads, 0);
-      const grpBadRate = totVol > 0 ? Math.min(0.99, (totBad / totVol) * scen.badRateMult) : 0;
-      $("biGradeFilterSummary").textContent = `Đang lọc ${filteredGrades.length} hạng: ${totVol.toLocaleString("vi-VN")} KH | Bad Rate bình quân: ${fmtPct(grpBadRate, 2)}`;
 
       renderChartFn("chartBiCreditMix", {
         data: {

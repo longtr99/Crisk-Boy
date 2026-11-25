@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex, nofollow, noarchive" />
   <title>Crisk-boy</title>
-  <link rel="stylesheet" href="styles.css?v=2.6" />
+  <link rel="stylesheet" href="styles.css?v=2.7" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -16,7 +16,7 @@
       <p>Trọn bộ 10 Module tự động &amp; trực quan: Credit Scorecard 8 bước, Altman Z, Basel I/II/III, Phép đo Lãi suất &amp; Arbitrage, GAP/Duration/Convexity &amp; Phái sinh, Ngoại hối, Thanh khoản, Chứng khoán hóa CMO, CAR &amp; CAMEL</p>
     </div>
     <div class="header-actions">
-      <span class="version-badge">Crisk-boy v2.6</span>
+      <span class="version-badge">Crisk-boy v2.7</span>
       <button class="btn btn-success" onclick="window.runAllModels()">▶ Chạy toàn bộ mô hình</button>
       <button class="btn btn-outline" id="btnToggleInsights" style="color:#0f172a;" onclick="window.toggleInsights()">📝 Ẩn thuyết minh</button>
       <button class="btn btn-outline" style="color:#0f172a;" onclick="window.exportSampleCSV()">⬇ Tải CSV mẫu</button>
@@ -25,7 +25,7 @@
   </header>
 
   <nav class="tab-nav">
-    <button class="tab-btn active" data-tab="tab-bi" onclick="window.switchTab('tab-bi', this)">0. BI Dashboard (Power BI)</button>
+    <button class="tab-btn active" data-tab="tab-bi" onclick="window.switchTab('tab-bi', this)">BI Dashboard (Power BI)</button>
     <button class="tab-btn" data-tab="tab-overview" onclick="window.switchTab('tab-overview', this)">1. Tổng quan &amp; Vòng đời</button>
     <button class="tab-btn" data-tab="tab-credit-all" onclick="window.switchTab('tab-credit-all', this)">2. Mô hình Rủi ro Tín dụng (Scorecard, Altman Z, Basel &amp; NPL)</button>
     <button class="tab-btn" data-tab="tab-interest" onclick="window.switchTab('tab-interest', this)">3. Lãi suất, LSHVBQ &amp; Arbitrage (C2)</button>
@@ -1095,12 +1095,12 @@
     </section>
   </main>
 
-  <script src="sample_data.js?v=2.6"></script>
-  <script src="models_engine.js?v=2.6"></script>
-  <script src="bank_risk_engine.js?v=2.6"></script>
-  <script src="chart_studio.js?v=2.6"></script>
-  <script src="narrative_engine.js?v=2.6"></script>
-  <script src="bi_dashboard.js?v=2.6"></script>
-  <script src="app.js?v=2.6"></script>
+  <script src="sample_data.js?v=2.7"></script>
+  <script src="models_engine.js?v=2.7"></script>
+  <script src="bank_risk_engine.js?v=2.7"></script>
+  <script src="chart_studio.js?v=2.7"></script>
+  <script src="narrative_engine.js?v=2.7"></script>
+  <script src="bi_dashboard.js?v=2.7"></script>
+  <script src="app.js?v=2.7"></script>
 </body>
 </html>
