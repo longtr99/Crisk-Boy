@@ -461,17 +461,38 @@
       $("resZpp").textContent = res.Z_double.score.toFixed(3);
       $("resZppBadge").innerHTML = `<span class="badge ${res.Z_double.zone.cls}">${res.Z_double.zone.label}</span>`;
 
+      if ($("resGrover") && res.grover) {
+        $("resGrover").textContent = res.grover.score.toFixed(3);
+        $("resGroverBadge").innerHTML = `<span class="badge ${res.grover.zone.cls}">${res.grover.zone.label}</span>`;
+      }
+      if ($("resZmi") && res.zmijewski) {
+        $("resZmi").textContent = res.zmijewski.score.toFixed(3);
+        $("resZmiBadge").innerHTML = `<span class="badge ${res.zmijewski.zone.cls}">${res.zmijewski.zone.label}</span>`;
+        if ($("resZmiProb")) $("resZmiProb").textContent = fmtPct(res.zmijewski.prob, 2);
+      }
+      if ($("resSpringate") && res.springate) {
+        $("resSpringate").textContent = res.springate.score.toFixed(3);
+        $("resSpringateBadge").innerHTML = `<span class="badge ${res.springate.zone.cls}">${res.springate.zone.label}</span>`;
+      }
+
       $("ovAltmanZ").textContent = res.Z.score.toFixed(2);
       $("ovAltmanZone").textContent = `${res.Z.zone.label} (Z'=${res.Z_prime.score.toFixed(2)}, Z''=${res.Z_double.score.toFixed(2)})`;
 
       renderChart("chartAltman", {
         type: "bar",
         data: {
-          labels: ["Altman Z (CPH SX)", "Altman Z' (Chưa CPH)", "Altman Z'' (Phi SX)"],
+          labels: ["Altman Z", "Altman Z'", "Altman Z''", "Grover (G)", "Zmijewski (X)", "Springate (S)"],
           datasets: [{
-            label: "Điểm Z-Score",
-            data: [+res.Z.score.toFixed(2), +res.Z_prime.score.toFixed(2), +res.Z_double.score.toFixed(2)],
-            backgroundColor: ["#1d4ed8", "#0f766e", "#7c3aed"]
+            label: "Điểm số Mô hình",
+            data: [
+              +res.Z.score.toFixed(2),
+              +res.Z_prime.score.toFixed(2),
+              +res.Z_double.score.toFixed(2),
+              +(res.grover ? res.grover.score : 0).toFixed(2),
+              +(res.zmijewski ? res.zmijewski.score : 0).toFixed(2),
+              +(res.springate ? res.springate.score : 0).toFixed(2)
+            ],
+            backgroundColor: ["#1d4ed8", "#0f766e", "#7c3aed", "#0284c7", "#d97706", "#059669"]
           }]
         },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }

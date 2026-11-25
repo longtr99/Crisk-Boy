@@ -573,11 +573,41 @@
       }
     };
 
+    // 3 mô hình dự báo phá sản bổ sung: Grover (2001), Zmijewski (1984), Springate (1978)
+    const ROA = Number(d.netIncome) / TA;
+    const EBT = Number(d.ebit) - Number(d.interestExpense);
+    const CR = Number(d.currentAssets) / CL;
+    const TD_TA = TL / TA;
+
+    // 4. Grover Model (2001): G = 1.650*X1 + 3.404*X3 - 0.016*ROA + 0.057
+    const G_score = 1.650 * X1 + 3.404 * X3 - 0.016 * ROA + 0.057;
+    const groverZone = G_score >= 0.01
+      ? { label: "Vùng An toàn", cls: "badge-success" }
+      : (G_score > -0.02
+        ? { label: "Vùng Cảnh báo", cls: "badge-warning" }
+        : { label: "Vùng Nguy hiểm", cls: "badge-danger" });
+
+    // 5. Zmijewski Probit Model (1984): X = -4.3 - 4.5*(NI/TA) + 5.7*(TL/TA) - 0.004*(CA/CL)
+    const Zmi_score = -4.3 - 4.5 * ROA + 5.7 * TD_TA - 0.004 * CR;
+    const Zmi_prob = normCDF(Zmi_score);
+    const zmiZone = Zmi_score < 0
+      ? { label: "Vùng An toàn (X < 0)", cls: "badge-success" }
+      : { label: "Nguy cơ Kiệt quệ (X ≥ 0)", cls: "badge-danger" };
+
+    // 6. Springate S-Score Model (1978): S = 1.03*A + 3.07*B + 0.66*C + 0.40*D
+    const S_score = 1.03 * X1 + 3.07 * X3 + 0.66 * (EBT / CL) + 0.40 * X5;
+    const springateZone = S_score > 0.862
+      ? { label: "Vùng An toàn (S > 0.862)", cls: "badge-success" }
+      : { label: "Nguy cơ Phá sản (S ≤ 0.862)", cls: "badge-danger" };
+
     return {
       components: { X1, X2, X3, X4_mkt, X4_book, X5 },
       Z: { score: Z, zone: zone(Z, 1.8, 2.99) },
       Z_prime: { score: Z_prime, zone: zone(Z_prime, 1.23, 2.9) },
       Z_double: { score: Z_double, zone: zone(Z_double, 1.1, 2.6) },
+      grover: { score: G_score, zone: groverZone },
+      zmijewski: { score: Zmi_score, prob: Zmi_prob, zone: zmiZone },
+      springate: { score: S_score, zone: springateZone },
       ratios
     };
   }

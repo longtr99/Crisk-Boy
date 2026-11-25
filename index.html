@@ -23,7 +23,7 @@
       <p>Trọn bộ 10 Module tự động &amp; trực quan: Credit Scorecard 8 bước, Altman Z, Basel I/II/III, Phép đo Lãi suất &amp; Arbitrage, GAP/Duration/Convexity &amp; Phái sinh, Ngoại hối, Thanh khoản, Chứng khoán hóa CMO, CAR &amp; CAMEL</p>
     </div>
     <div class="header-actions">
-      <span class="version-badge">Crisk-boy v2.15</span>
+      <span class="version-badge">Crisk-boy v2.16</span>
       <button class="btn btn-primary" style="background:#f59e0b; color:#0f172a; font-weight:700;" onclick="document.getElementById('unifiedFileInput').click()">📂 Nạp Data (Nhiều tệp: Excel / CSV / PDF)</button>
       <input type="file" id="unifiedFileInput" multiple accept=".xlsx,.xls,.csv,.pdf,application/pdf" style="display:none" onchange="window.DataImporter.importMultipleFiles(this.files); this.value='';" />
       <button class="btn btn-success" onclick="window.runAllModels()">▶ Chạy toàn bộ mô hình</button>
@@ -581,9 +581,30 @@
         </div>
       </div>
 
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-header"><h3>Mô hình 4: Grover Model (2001)</h3></div>
+          <div class="kpi-value" id="resGrover">--</div>
+          <div id="resGroverBadge"></div>
+          <p class="kpi-sub" style="margin-top:8px;">G = 1.65·X1 + 3.404·X3 − 0.016·ROA + 0.057<br/>Ngưỡng: ≥0.01 An toàn | −0.02 đến 0.01 Cảnh báo | ≤−0.02 Nguy hiểm</p>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Mô hình 5: Zmijewski Probit (1984)</h3></div>
+          <div class="kpi-value" id="resZmi">--</div>
+          <div id="resZmiBadge"></div>
+          <p class="kpi-sub" style="margin-top:8px;">Xác suất phá sản (Probit): <strong id="resZmiProb">--</strong><br/>Ngưỡng: X &lt; 0 An toàn | X ≥ 0 Nguy cơ kiệt quệ</p>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Mô hình 6: Springate S-Score (1978)</h3></div>
+          <div class="kpi-value" id="resSpringate">--</div>
+          <div id="resSpringateBadge"></div>
+          <p class="kpi-sub" style="margin-top:8px;">S = 1.03·A + 3.07·B + 0.66·C + 0.40·D<br/>Ngưỡng: &gt;0.862 An toàn | ≤0.862 Nguy cơ phá sản</p>
+        </div>
+      </div>
+
       <div class="grid-2">
         <div class="card">
-          <div class="card-header"><h3>Biểu đồ So sánh 3 Phiên bản Altman Z-Score</h3></div>
+          <div class="card-header"><h3>Biểu đồ So sánh 6 Mô hình Dự báo Phá sản (Altman, Grover, Zmijewski, Springate)</h3></div>
           <div class="chart-box-sm"><canvas id="chartAltman"></canvas></div>
         </div>
         <div class="card">
