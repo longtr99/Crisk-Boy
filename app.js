@@ -35,6 +35,7 @@
   function refreshOverviewInsight() {
     const el = $("insight_overview");
     if (el && Narrative) el.innerHTML = Narrative.explainOverview(liveState);
+    if (global.BIDashboard) global.BIDashboard.render(liveState);
   }
 
   function refreshBaselInsight() {
@@ -51,7 +52,11 @@
     }
   }
 
-  function renderChart(canvasId, config) {
+  function renderChart(canvasId, config, meta = {}) {
+    if (global.ChartStudio) {
+      global.ChartStudio.render(canvasId, config, meta);
+      return;
+    }
     if (typeof Chart === "undefined") return;
     const canvas = $(canvasId);
     if (!canvas) return;
@@ -72,6 +77,7 @@
     if (btnEl) btnEl.classList.add("active");
     window.scrollTo({ top: 0, behavior: "smooth" });
     setTimeout(() => {
+      if (global.ChartStudio) global.ChartStudio.resizeAll();
       Object.values(charts).forEach(c => {
         if (c && typeof c.resize === "function") c.resize();
       });
@@ -225,7 +231,7 @@
             y: { min: 0, max: 1, title: { display: true, text: "Tỷ lệ bắt đúng Nợ xấu (TPR)" } }
           }
         }
-      });
+      }, { rocInfo: { gini: res.valMetrics.gini, auc: res.valMetrics.auc } });
 
       // 2. KS Chart
       renderChart("chartKs", {
@@ -256,7 +262,7 @@
             y: { min: 0, max: 100, title: { display: true, text: "% Tích lũy" } }
           }
         }
-      });
+      }, { ksInfo: { ks: res.valMetrics.ks, maxKSPct: res.valMetrics.maxKSPct } });
 
       // 3. Master Scale 10 Risk Grades (Volume Bars + Bad Rate % Line)
       renderChart("chartMasterScale", {
@@ -293,7 +299,7 @@
             y1: { position: "right", grid: { drawOnChartArea: false }, title: { display: true, text: "Bad Rate (%)" } }
           }
         }
-      });
+      }, { masterScale: res.masterScale });
 
       // 4. IV Bar Chart
       renderChart("chartIv", {
@@ -915,7 +921,9 @@
     $("ch2LshBadge").textContent = `LSHVBQ Tổng nguồn: ${fmtPct(res.avgLshvbq, 4)}/tháng | LS cho vay gợi ý (+0,18% lãi gộp): ${fmtPct(res.suggestedLendingRate, 4)}/tháng`;
     $("ovLshvbq").textContent = `${fmtPct(res.avgLshvbq, 3)}/th`;
     $("ovArbInfo").textContent = `LS vay gợi ý: ${fmtPct(res.suggestedLendingRate, 3)}/th`;
+    liveState.ch2 = res;
     if ($("insight_interest") && Narrative) $("insight_interest").innerHTML = Narrative.explainInterest(res);
+    refreshOverviewInsight();
   }
 
   // =========================================================================

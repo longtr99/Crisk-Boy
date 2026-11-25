@@ -1,4 +1,4 @@
-/* Crisk-boy v2.4 — Clean Banking Analytics UI */
+/* Crisk-boy v2.6 — Clean Banking Analytics UI */
 :root {
   --bg: #f4f7fb;
   --surface: #ffffff;
@@ -436,3 +436,168 @@ tbody tr:hover { background: #f8fafc; }
 body.hide-insights .insight-box {
   display: none;
 }
+
+/* v2.5 Interactive Chart Studio (Toolbar, Inspect Strip & Fullscreen Modal) */
+.chart-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 6px 8px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.ct-modes, .ct-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.ct-btn {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.ct-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+.ct-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+}
+.chart-inspect-strip {
+  margin-top: 8px;
+  padding: 7px 11px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 7px;
+  font-size: 0.8rem;
+  color: #334155;
+}
+.inspect-hint {
+  color: var(--text-muted);
+}
+
+/* Fullscreen Chart Modal */
+.cs-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.cs-modal.open {
+  display: flex;
+}
+.cs-modal-content {
+  background: #ffffff;
+  border-radius: 14px;
+  width: min(1150px, 96vw);
+  height: min(680px, 90vh);
+  display: flex;
+  flex-direction: column;
+  padding: 18px 22px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.35);
+}
+.cs-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+.cs-modal-header h3 {
+  margin: 0;
+  font-size: 1.08rem;
+  color: var(--text);
+}
+.cs-modal-body {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+
+/* v2.6 Power BI + Data Analyst Executive Dashboard (Tab 0) */
+.bi-slicer-bar {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #f8fafc;
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 18px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  align-items: end;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.14);
+}
+@media (max-width: 960px) { .bi-slicer-bar { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .bi-slicer-bar { grid-template-columns: 1fr; } }
+.bi-slicer-bar label {
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #93c5fd;
+  margin-bottom: 5px;
+}
+.bi-slicer-bar select {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #475569;
+  font-weight: 600;
+}
+.bi-slicer-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.bi-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+@media (max-width: 1024px) { .bi-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .bi-kpi-grid { grid-template-columns: 1fr; } }
+.bi-kpi-tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 15px 18px;
+  box-shadow: var(--shadow);
+}
+.bi-progress-track, .bi-mini-bar {
+  width: 100%;
+  height: 7px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 8px 0 6px;
+}
+.bi-mini-bar { margin: 0; height: 8px; }
+.bi-progress-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+.fill-ok { background: var(--success); }
+.fill-warn { background: var(--warning); }
+.fill-bad { background: var(--danger); }

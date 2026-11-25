@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex, nofollow, noarchive" />
   <title>Crisk-boy</title>
-  <link rel="stylesheet" href="styles.css?v=2.4" />
+  <link rel="stylesheet" href="styles.css?v=2.6" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -16,7 +16,7 @@
       <p>Trọn bộ 10 Module tự động &amp; trực quan: Credit Scorecard 8 bước, Altman Z, Basel I/II/III, Phép đo Lãi suất &amp; Arbitrage, GAP/Duration/Convexity &amp; Phái sinh, Ngoại hối, Thanh khoản, Chứng khoán hóa CMO, CAR &amp; CAMEL</p>
     </div>
     <div class="header-actions">
-      <span class="version-badge">Crisk-boy v2.4</span>
+      <span class="version-badge">Crisk-boy v2.6</span>
       <button class="btn btn-success" onclick="window.runAllModels()">▶ Chạy toàn bộ mô hình</button>
       <button class="btn btn-outline" id="btnToggleInsights" style="color:#0f172a;" onclick="window.toggleInsights()">📝 Ẩn thuyết minh</button>
       <button class="btn btn-outline" style="color:#0f172a;" onclick="window.exportSampleCSV()">⬇ Tải CSV mẫu</button>
@@ -25,7 +25,8 @@
   </header>
 
   <nav class="tab-nav">
-    <button class="tab-btn active" data-tab="tab-overview" onclick="window.switchTab('tab-overview', this)">1. Tổng quan &amp; Vòng đời</button>
+    <button class="tab-btn active" data-tab="tab-bi" onclick="window.switchTab('tab-bi', this)">0. BI Dashboard (Power BI)</button>
+    <button class="tab-btn" data-tab="tab-overview" onclick="window.switchTab('tab-overview', this)">1. Tổng quan &amp; Vòng đời</button>
     <button class="tab-btn" data-tab="tab-credit-all" onclick="window.switchTab('tab-credit-all', this)">2. Mô hình Rủi ro Tín dụng (Scorecard, Altman Z, Basel &amp; NPL)</button>
     <button class="tab-btn" data-tab="tab-interest" onclick="window.switchTab('tab-interest', this)">3. Lãi suất, LSHVBQ &amp; Arbitrage (C2)</button>
     <button class="tab-btn" data-tab="tab-raterisk" onclick="window.switchTab('tab-raterisk', this)">4. RR Lãi suất: GAP, Duration &amp; Phái sinh (C3–4)</button>
@@ -34,8 +35,146 @@
   </nav>
 
   <main class="main-wrap">
+    <!-- ==================== TAB 0: POWER BI + DATA ANALYST EXECUTIVE DASHBOARD ==================== -->
+    <section id="tab-bi" class="tab-panel active">
+      <div class="bi-slicer-bar">
+        <div>
+          <label>1. Bộ lọc Trụ cột Rủi ro (Pillar Slicer)</label>
+          <select id="biSlicerPillar" onchange="window.BIDashboard.setFilter('pillar', this.value)">
+            <option value="all" selected>Tất cả trụ cột (Toàn ngân hàng)</option>
+            <option value="credit">Chỉ Rủi ro Tín dụng (Credit)</option>
+            <option value="market">Chỉ Lãi suất &amp; Ngoại hối (Market/ALM)</option>
+            <option value="capital">Chỉ Vốn Basel &amp; Thanh khoản</option>
+          </select>
+        </div>
+        <div>
+          <label>2. Kịch bản Stress Test (What-If Slicer)</label>
+          <select id="biSlicerScenario" onchange="window.BIDashboard.setFilter('scenario', this.value)">
+            <option value="base" selected>Cơ sở (Base Case — Số liệu thực tế)</option>
+            <option value="mild">Căng thẳng nhẹ (ΔR +1.5%, NPL ×1.35)</option>
+            <option value="severe">Khủng hoảng (ΔR +3.0%, NPL ×2.0)</option>
+          </select>
+        </div>
+        <div>
+          <label>3. Lọc Phân khúc Hạng (Master Scale Slicer)</label>
+          <select id="biSlicerGrade" onchange="window.BIDashboard.setFilter('gradeGroup', this.value)">
+            <option value="all" selected>Tất cả 10 Hạng (Grade 01 – 10)</option>
+            <option value="safe">Nhóm An toàn (Grade 01 – 04)</option>
+            <option value="mid">Nhóm Trung bình (Grade 05 – 07)</option>
+            <option value="high">Nhóm Rủi ro cao (Grade 08 – 10)</option>
+          </select>
+        </div>
+        <div class="bi-slicer-actions">
+          <button type="button" class="btn btn-outline btn-sm" onclick="window.BIDashboard.resetFilters()">↺ Reset lọc</button>
+          <button type="button" class="btn btn-success btn-sm" onclick="window.BIDashboard.exportBICSV()">⬇ Xuất BI CSV</button>
+        </div>
+      </div>
+
+      <!-- 6 Power BI KPI Cards -->
+      <div class="bi-kpi-grid">
+        <div class="bi-kpi-tile">
+          <div class="kpi-label">Chỉ số Sức khỏe Rủi ro Toàn hệ thống</div>
+          <div class="kpi-value" id="bi_health_val">--</div>
+          <div class="bi-progress-track"><div id="bi_health_bar" class="bi-progress-fill fill-ok" style="width:0%"></div></div>
+          <div class="kpi-sub" id="bi_health_sub">--</div>
+        </div>
+        <div class="bi-kpi-tile">
+          <div class="kpi-label">Credit Scorecard (Gini / KS Validation)</div>
+          <div class="kpi-value" id="bi_gini_val">--</div>
+          <div class="bi-progress-track"><div id="bi_gini_bar" class="bi-progress-fill" style="width:0%"></div></div>
+          <div class="kpi-sub" id="bi_gini_sub">--</div>
+        </div>
+        <div class="bi-kpi-tile">
+          <div class="kpi-label">Tỷ lệ Nợ xấu Danh mục (NPL Nhóm 3–5)</div>
+          <div class="kpi-value" id="bi_npl_val">--</div>
+          <div class="bi-progress-track"><div id="bi_npl_bar" class="bi-progress-fill fill-ok" style="width:0%"></div></div>
+          <div class="kpi-sub" id="bi_npl_sub">--</div>
+        </div>
+        <div class="bi-kpi-tile">
+          <div class="kpi-label">An toàn Vốn (CAR / Basel III CET1)</div>
+          <div class="kpi-value" id="bi_car_val">--</div>
+          <div class="bi-progress-track"><div id="bi_car_bar" class="bi-progress-fill fill-ok" style="width:0%"></div></div>
+          <div class="kpi-sub" id="bi_car_sub">--</div>
+        </div>
+        <div class="bi-kpi-tile">
+          <div class="kpi-label">Thanh khoản (Basel III LCR / Chi trả ngay)</div>
+          <div class="kpi-value" id="bi_liq_val">--</div>
+          <div class="bi-progress-track"><div id="bi_liq_bar" class="bi-progress-fill fill-ok" style="width:0%"></div></div>
+          <div class="kpi-sub" id="bi_liq_sub">--</div>
+        </div>
+        <div class="bi-kpi-tile">
+          <div class="kpi-label">Rủi ro Lãi suất (ΔE Duration) &amp; ROE</div>
+          <div class="kpi-value" id="bi_mkt_val">--</div>
+          <div class="bi-progress-track"><div id="bi_mkt_bar" class="bi-progress-fill fill-ok" style="width:0%"></div></div>
+          <div class="kpi-sub" id="bi_mkt_sub">--</div>
+        </div>
+      </div>
+
+      <!-- 4 Interactive Power BI Charts -->
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <h3>1. Bức tranh Sức khỏe 6 Trụ cột Rủi ro (Thang 0–100)</h3>
+            <span class="badge badge-info">Thực tế vs Chuẩn 75đ</span>
+          </div>
+          <div class="chart-box"><canvas id="chartBiRadar"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h3>2. Phổ Hạng Tín dụng &amp; Nợ xấu (Lọc động theo Slicer)</h3>
+            <span id="biGradeFilterSummary" class="badge badge-info">--</span>
+          </div>
+          <div class="chart-box"><canvas id="chartBiCreditMix"></canvas></div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <h3>3. Stress Test — Đối chiếu Cơ sở vs Kịch bản đang chọn</h3>
+            <span class="badge badge-warning">What-If Analysis</span>
+          </div>
+          <div class="chart-box-sm"><canvas id="chartBiCapitalStress"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h3>4. Cơ cấu Tài sản Rủi ro (RWA Nội/Ngoại bảng, IRB &amp; NPL)</h3>
+            <span class="badge badge-info">Phân bổ Phơi nhiễm</span>
+          </div>
+          <div class="chart-box-sm"><canvas id="chartBiRwaMix"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Data Analyst Risk Matrix Table -->
+      <div class="card">
+        <div class="card-header">
+          <h3>5. Ma trận Giám sát 10 Chỉ tiêu Rủi ro Toàn diện (Data Analyst Matrix)</h3>
+          <span class="badge badge-info">Bấm "Mở chi tiết →" để nhảy thẳng tới mô hình gốc</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Trụ cột</th>
+                <th>Chỉ tiêu / Mô hình</th>
+                <th class="num">Giá trị hiện tại</th>
+                <th class="num">Ngưỡng chuẩn</th>
+                <th>Mức độ an toàn</th>
+                <th>Trạng thái</th>
+                <th class="num">Điều hướng</th>
+              </tr>
+            </thead>
+            <tbody id="tblBiMatrix"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Data Analyst Executive Narrative -->
+      <div id="insight_bi_dashboard" class="insight-box"></div>
+    </section>
+
     <!-- ==================== TAB 1: TỔNG QUAN ==================== -->
-    <section id="tab-overview" class="tab-panel active">
+    <section id="tab-overview" class="tab-panel">
       <div class="card">
         <div class="card-header">
           <h2>Bảng điều khiển Tổng hợp Tất cả Mô hình (Auto-Run)</h2>
@@ -956,10 +1095,12 @@
     </section>
   </main>
 
-  <script src="sample_data.js?v=2.4"></script>
-  <script src="models_engine.js?v=2.4"></script>
-  <script src="bank_risk_engine.js?v=2.4"></script>
-  <script src="narrative_engine.js?v=2.4"></script>
-  <script src="app.js?v=2.4"></script>
+  <script src="sample_data.js?v=2.6"></script>
+  <script src="models_engine.js?v=2.6"></script>
+  <script src="bank_risk_engine.js?v=2.6"></script>
+  <script src="chart_studio.js?v=2.6"></script>
+  <script src="narrative_engine.js?v=2.6"></script>
+  <script src="bi_dashboard.js?v=2.6"></script>
+  <script src="app.js?v=2.6"></script>
 </body>
 </html>
