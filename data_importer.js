@@ -1,4 +1,4 @@
-/* data_importer.js v2.9 — Nạp/Xuất 1 file Excel Tổng (All-in-One) & Quét tự động PDF BCTC Doanh nghiệp (PDF.js) */
+/* data_importer.js v2.12 — Nạp hàng loạt nhiều tệp cùng lúc (Excel Tổng / CSV / PDF BCTC & Thuyết minh BCTC Ngân hàng) */
 (function (global) {
   "use strict";
 
@@ -147,7 +147,6 @@
       }
       const wb = XLSX.utils.book_new();
 
-      // Sheet 1..5: Các bảng thông số Key-Value
       Object.entries(EXCEL_SHEET_MAP).forEach(([sheetName, items]) => {
         const rows = [["Ma_Truong_ID", "Ten_Chi_Tieu", "Gia_Tri"]];
         items.forEach(([domId, label]) => {
@@ -159,7 +158,6 @@
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
       });
 
-      // Sheet 6: Scorecard_Data (300 dòng mẫu gọn nhẹ để người dùng dễ sửa & upload nhanh)
       const scRows = global.CreditSampleData ? global.CreditSampleData.generateHomeCreditSample(300, 2026) : [];
       if (scRows.length) {
         const wsSc = XLSX.utils.json_to_sheet(scRows);
@@ -174,85 +172,99 @@
   }
 
   // =========================================================================
-  // 2. NẠP FILE EXCEL TỔNG (ALL-IN-ONE) HOẶC FILE SCORECARD ĐƠN LẺ
+  // 2. NẠP FILE EXCEL TỔNG / CSV SCORECARD (TRẢ VỀ PROMISE CHO BATCH)
   // =========================================================================
-  function importExcelWorkbook(file) {
-    if (!file) return;
-    try {
-      setStatus("uploadStatus", `Đang đọc file ${file.name}...`, "info");
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        try {
-          if (typeof XLSX === "undefined") {
-            throw new Error("Thư viện SheetJS chưa nạp được.");
-          }
-          const data = new Uint8Array(e.target.result);
-          const wb = XLSX.read(data, { type: "array" });
+  function importExcelWorkbook(file, opts = {}) {
+    return new Promise((resolve) => {
+      if (!file) return resolve({ ok: false, fileName: "", message: "Không có tệp." });
+      try {
+        if (!opts.deferRun) setStatus("uploadStatus", `Đang đọc file ${file.name}...`, "info");
+        const reader = new FileReader();
+        reader.onerror = () => resolve({ ok: false, fileName: file.name, message: "Không thể đọc tệp từ thiết bị." });
+        reader.onload = function (e) {
+          try {
+            if (typeof XLSX === "undefined") {
+              throw new Error("Thư viện SheetJS chưa nạp được.");
+            }
+            const data = new Uint8Array(e.target.result);
+            const wb = XLSX.read(data, { type: "array" });
 
-          let updatedFields = 0;
-          let scorecardRows = null;
+            let updatedFields = 0;
+            let scorecardCount = 0;
+            const knownSheets = Object.keys(EXCEL_SHEET_MAP);
+            const hasMasterSheets = wb.SheetNames.some(n => knownSheets.includes(n));
 
-          // Kiểm tra xem có phải File Excel Tổng nhiều sheet không
-          const knownSheets = Object.keys(EXCEL_SHEET_MAP);
-          const hasMasterSheets = wb.SheetNames.some(n => knownSheets.includes(n));
-
-          if (hasMasterSheets) {
-            knownSheets.forEach(sName => {
-              if (!wb.Sheets[sName]) return;
-              const rows = XLSX.utils.sheet_to_json(wb.Sheets[sName], { defval: "" });
-              rows.forEach(r => {
-                const domId = String(r.Ma_Truong_ID || r.ID || "").trim();
-                const val = r.Gia_Tri !== undefined ? r.Gia_Tri : r.Value;
-                if (domId && val !== "" && val !== undefined && $(domId)) {
-                  $(domId).value = val;
-                  updatedFields++;
-                }
+            if (hasMasterSheets) {
+              const extractedInputs = {};
+              knownSheets.forEach(sName => {
+                if (!wb.Sheets[sName]) return;
+                const rows = XLSX.utils.sheet_to_json(wb.Sheets[sName], { defval: "" });
+                rows.forEach(r => {
+                  const domId = String(r.Ma_Truong_ID || r.ID || "").trim();
+                  const val = r.Gia_Tri !== undefined ? r.Gia_Tri : r.Value;
+                  if (domId && val !== "" && val !== undefined && $(domId)) {
+                    $(domId).value = val;
+                    if (isFinite(Number(val))) extractedInputs[domId] = Number(val);
+                    updatedFields++;
+                  }
+                });
               });
-            });
-            if (wb.Sheets["Scorecard_Data"]) {
-              const sc = XLSX.utils.sheet_to_json(wb.Sheets["Scorecard_Data"], { defval: "" });
-              if (sc.length && ("TARGET" in sc[0])) scorecardRows = sc;
+              if (wb.Sheets["Scorecard_Data"]) {
+                const sc = XLSX.utils.sheet_to_json(wb.Sheets["Scorecard_Data"], { defval: "" });
+                if (sc.length && ("TARGET" in sc[0])) {
+                  scorecardCount = sc.length;
+                  if (global.setActiveScorecardDataset) global.setActiveScorecardDataset(sc);
+                }
+              }
+              let detectedYear = null;
+              if (global.MultiYearEngine && Object.keys(extractedInputs).length > 0) {
+                detectedYear = global.MultiYearEngine.detectYearFromFilenameOrText(file.name, wb.SheetNames.join(" "));
+                global.MultiYearEngine.upsertYearData(detectedYear, extractedInputs, file.name, false);
+              }
+              const msg = `Excel Tổng${detectedYear ? ` [Năm ${detectedYear}]` : ""} (${updatedFields} chỉ tiêu${scorecardCount ? ` + ${scorecardCount} dòng Scorecard` : ""})`;
+              if (!opts.deferRun) {
+                if (global.runAllModels) global.runAllModels();
+                if (global.MultiYearEngine) global.MultiYearEngine.renderMultiYearUI();
+                setStatus("uploadStatus", `✅ Đã nạp ${msg} từ ${file.name}`, "ok");
+              }
+              return resolve({ ok: true, fileName: file.name, type: "excel_master", detectedYear, updatedFields, scorecardCount, logRows: [], message: msg });
+            } else {
+              const firstSheet = wb.Sheets[wb.SheetNames[0]];
+              const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+              if (!rows.length) throw new Error("Tệp dữ liệu trống.");
+              if (!("TARGET" in rows[0])) {
+                throw new Error("Không tìm thấy cột 'TARGET' hoặc cấu trúc sheet Excel Tổng.");
+              }
+              scorecardCount = rows.length;
+              if (global.setActiveScorecardDataset) global.setActiveScorecardDataset(rows);
+              const msg = `Scorecard (${scorecardCount.toLocaleString("vi-VN")} dòng)`;
+              if (!opts.deferRun) {
+                if (global.runScorecardUI) global.runScorecardUI();
+                setStatus("uploadStatus", `✅ Đã nạp ${msg} từ ${file.name}`, "ok");
+              }
+              return resolve({ ok: true, fileName: file.name, type: "scorecard", updatedFields: 0, scorecardCount, logRows: [], message: msg });
             }
-            if (scorecardRows && global.setActiveScorecardDataset) {
-              global.setActiveScorecardDataset(scorecardRows);
-            }
-            if (global.runAllModels) global.runAllModels();
-            setStatus(
-              "uploadStatus",
-              `✅ Đã nạp Excel Tổng: tự động điền ${updatedFields} chỉ tiêu${scorecardRows ? ` + ${scorecardRows.length} dòng Scorecard` : ""} & chạy lại toàn bộ 7 Tab!`,
-              "ok"
-            );
-          } else {
-            // File đơn lẻ Scorecard (CSV / XLSX có cột TARGET)
-            const firstSheet = wb.Sheets[wb.SheetNames[0]];
-            const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
-            if (!rows.length) throw new Error("Tệp dữ liệu trống.");
-            if (!("TARGET" in rows[0])) {
-              throw new Error("Không tìm thấy cột 'TARGET' hoặc cấu trúc sheet Excel Tổng (hãy tải File Excel Tổng mẫu để xem định dạng).");
-            }
-            if (global.setActiveScorecardDataset) global.setActiveScorecardDataset(rows);
-            if (global.runScorecardUI) global.runScorecardUI();
-            setStatus("uploadStatus", `✅ Đã nạp ${rows.length.toLocaleString("vi-VN")} dòng Scorecard từ ${file.name}`, "ok");
+          } catch (err) {
+            if (!opts.deferRun) setStatus("uploadStatus", `Lỗi đọc ${file.name}: ${err.message}`, "err");
+            return resolve({ ok: false, fileName: file.name, type: "excel", message: err.message });
           }
-        } catch (err) {
-          setStatus("uploadStatus", `Lỗi đọc Excel/CSV: ${err.message}`, "err");
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    } catch (err) {
-      setStatus("uploadStatus", `Lỗi: ${err.message}`, "err");
-    }
+        };
+        reader.readAsArrayBuffer(file);
+      } catch (err) {
+        if (!opts.deferRun) setStatus("uploadStatus", `Lỗi: ${err.message}`, "err");
+        resolve({ ok: false, fileName: file.name, type: "excel", message: err.message });
+      }
+    });
   }
 
   // =========================================================================
-  // 3. QUÉT TỰ ĐỘNG PDF BCTC DOANH NGHIỆP (THÔNG TƯ 200 / 133 & ENGLISH)
+  // 3. QUÉT TỰ ĐỘNG PDF BCTC DOANH NGHIỆP & THUYẾT MINH BCTC NGÂN HÀNG
   // =========================================================================
   function parseNumberToken(str) {
     if (!str) return null;
     let s = String(str).trim();
     const isNeg = s.startsWith("(") && s.endsWith(")");
     s = s.replace(/[()]/g, "").trim();
-    // Xử lý định dạng số Việt Nam (1.234.567 hoặc 1,234,567)
     const dots = (s.match(/\./g) || []).length;
     const commas = (s.match(/,/g) || []).length;
     if (dots > 1 && commas === 0) {
@@ -260,10 +272,8 @@
     } else if (commas > 1 && dots === 0) {
       s = s.replace(/,/g, "");
     } else if (dots >= 1 && commas === 1 && s.indexOf(".") < s.indexOf(",")) {
-      // Kiểu VN: 1.234.567,89
       s = s.replace(/\./g, "").replace(",", ".");
     } else if (commas >= 1 && dots === 1 && s.indexOf(",") < s.indexOf(".")) {
-      // Kiểu Mỹ: 1,234,567.89
       s = s.replace(/,/g, "");
     } else if (dots === 1 && s.split(".")[1].length === 3) {
       s = s.replace(/\./g, "");
@@ -278,23 +288,19 @@
   }
 
   function extractFirstLargeNumber(line, ignoreCodes = []) {
-    // Tìm các token số trên cùng 1 dòng (bỏ qua mã số kế toán như 100, 270, 300, 400 và năm 2023/2024/2025/2026)
     const tokens = line.match(/\(?\d{1,3}(?:[.,]\d{3})+(?:[.,]\d+)?\)?|\(?\d+(?:[.,]\d+)?\)?/g) || [];
     const ignoreSet = new Set([...ignoreCodes.map(String), "2020", "2021", "2022", "2023", "2024", "2025", "2026", "2027"]);
     const candidates = [];
     for (const tk of tokens) {
       const clean = tk.replace(/[()]/g, "");
       if (ignoreSet.has(clean)) continue;
-      // Bỏ qua số thuyết minh dạng 5.1, V.01
       if (/^\d{1,2}\.\d{1,2}$/.test(clean)) continue;
       const val = parseNumberToken(tk);
       if (val !== null && Math.abs(val) >= 1) {
         candidates.push({ raw: tk, val });
       }
     }
-    // Trên BCTC VN, cột đầu tiên sau Mã số & Thuyết minh thường là Số cuối kỳ / Năm nay
     if (candidates.length === 0) return null;
-    // Ưu tiên số có độ lớn >= 100 (tránh nhầm số thứ tự thuyết minh)
     const big = candidates.find(c => Math.abs(c.val) >= 100);
     return big || candidates[0];
   }
@@ -317,10 +323,62 @@
     { id: "c_ni",    label: "Lợi nhuận sau thuế", codes: ["60"], patterns: [/lợi\s*nhuận\s*sau\s*thuế\s*(?:thu\s*nhập\s*doanh\s*nghiệp|tndn)/i, /net\s*(?:profit|income)/i] }
   ];
 
-  async function importPdfBCTC(file) {
-    if (!file) return;
+  const BANK_NOTES_RULES = [
+    { id: "npl_g1",   group: "Ngân hàng (NPL)", label: "Nợ nhóm 1 — Đủ tiêu chuẩn", codes: [], patterns: [/nợ\s*đủ\s*tiêu\s*chuẩn/i, /nhóm\s*1\b/i, /standard\s*loans?/i] },
+    { id: "npl_g2",   group: "Ngân hàng (NPL)", label: "Nợ nhóm 2 — Cần chú ý", codes: [], patterns: [/nợ\s*cần\s*chú\s*ý/i, /nhóm\s*2\b/i, /special\s*mention/i] },
+    { id: "npl_g3",   group: "Ngân hàng (NPL)", label: "Nợ nhóm 3 — Dưới tiêu chuẩn", codes: [], patterns: [/nợ\s*dưới\s*tiêu\s*chuẩn/i, /nhóm\s*3\b/i, /sub-?standard/i] },
+    { id: "npl_g4",   group: "Ngân hàng (NPL)", label: "Nợ nhóm 4 — Nghi ngờ", codes: [], patterns: [/nợ\s*nghi\s*ngờ/i, /nhóm\s*4\b/i, /doubtful\s*loans?/i] },
+    { id: "npl_g5",   group: "Ngân hàng (NPL)", label: "Nợ nhóm 5 — Có KN mất vốn", codes: [], patterns: [/nợ\s*có\s*khả\s*năng\s*mất\s*vốn/i, /nhóm\s*5\b/i, /loss\s*loans?/i] },
+    { id: "npl_dep",  group: "Ngân hàng (NPL)", label: "Tiền gửi của khách hàng (Huy động)", codes: [], patterns: [/tiền\s*gửi\s*của\s*khách\s*hàng/i, /deposits\s*from\s*customers/i] },
+    { id: "cc_nii",   group: "Ngân hàng (CAMEL)", label: "Thu nhập lãi thuần (NII)", codes: ["I"], patterns: [/thu\s*nhập\s*lãi\s*thuần/i, /net\s*interest\s*income/i] },
+    { id: "cc_opinc", group: "Ngân hàng (CAMEL)", label: "Tổng thu nhập hoạt động (TOI)", codes: ["VII"], patterns: [/tổng\s*thu\s*nhập\s*hoạt\s*động/i, /total\s*operating\s*income/i] },
+    { id: "cc_opexp", group: "Ngân hàng (CAMEL)", label: "Chi phí hoạt động (OpEx)", codes: ["VIII"], patterns: [/chi\s*phí\s*hoạt\s*động/i, /operating\s*expenses?/i] },
+    { id: "cc_ni",    group: "Ngân hàng (CAMEL)", label: "Lợi nhuận sau thuế NH (NI)", codes: ["XIII"], patterns: [/lợi\s*nhuận\s*sau\s*thuế\s*(?:tndn|thu\s*nhập\s*doanh\s*nghiệp)?/i, /net\s*profit\s*after\s*tax/i] },
+    { id: "cc_t1",    group: "Ngân hàng (CAR)", label: "Vốn cấp 1 (Tier 1)", codes: [], patterns: [/vốn\s*cấp\s*1/i, /tier\s*1\s*capital/i] },
+    { id: "cc_t2",    group: "Ngân hàng (CAR)", label: "Vốn cấp 2 (Tier 2)", codes: [], patterns: [/vốn\s*cấp\s*2/i, /tier\s*2\s*capital/i] }
+  ];
+
+  function renderExtractLogTable(logRows, summaryText) {
+    const logWrap = $("pdfExtractLog");
+    if (!logWrap) return;
+    if (!logRows || !logRows.length) {
+      logWrap.style.display = "none";
+      return;
+    }
+    logWrap.style.display = "block";
+    logWrap.innerHTML = `
+      <div style="font-weight:700; margin-bottom:6px;">${summaryText}</div>
+      <div class="table-wrap" style="max-height:230px; overflow-y:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Tệp nguồn</th>
+              <th>Phân hệ</th>
+              <th>Chỉ tiêu BCTC / Thuyết minh</th>
+              <th class="num">Số gốc PDF</th>
+              <th class="num">Đã nạp (Triệu VND)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${logRows.map(r => `
+              <tr>
+                <td><small style="color:var(--text-muted);">${r.sourceFile || "PDF"}</small></td>
+                <td><span class="badge badge-info">${r.group}</span></td>
+                <td><strong>${r.label}</strong></td>
+                <td class="num">${r.raw}</td>
+                <td class="num"><strong>${r.converted.toLocaleString("vi-VN")}</strong></td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  async function importPdfBCTC(file, opts = {}) {
+    if (!file) return { ok: false, fileName: "", message: "Không có tệp PDF." };
     try {
-      setStatus("pdfUploadStatus", `Đang quét văn bản từ PDF: ${file.name}...`, "info");
+      if (!opts.deferRun) setStatus("pdfUploadStatus", `Đang quét văn bản từ PDF: ${file.name}...`, "info");
       if (typeof pdfjsLib === "undefined") {
         throw new Error("Thư viện PDF.js chưa nạp được (kiểm tra kết nối mạng).");
       }
@@ -335,7 +393,6 @@
       for (let p = 1; p <= pdf.numPages; p++) {
         const page = await pdf.getPage(p);
         const content = await page.getTextContent();
-        // Gom các text item theo tọa độ Y (cùng 1 dòng bảng BCTC)
         const lineMap = {};
         content.items.forEach(item => {
           const str = (item.str || "").trim();
@@ -357,146 +414,251 @@
       }
 
       if (totalChars < 40) {
-        setStatus(
-          "pdfUploadStatus",
-          "⚠️ File PDF này là bản scan dạng ảnh (không có lớp chữ text). Hãy dùng file PDF xuất từ phần mềm kế toán/Word hoặc dùng File Excel Tổng.",
-          "err"
-        );
-        return;
+        const errMsg = "Bản scan dạng ảnh (không có lớp chữ text).";
+        if (!opts.deferRun) setStatus("pdfUploadStatus", `⚠️ ${file.name}: ${errMsg}`, "err");
+        return { ok: false, fileName: file.name, type: "pdf", message: errMsg, logRows: [] };
       }
 
-      // Quét khớp từng chỉ tiêu BCTC
       const found = {};
-      for (const rule of BCTC_RULES) {
+      const allRules = [
+        ...BCTC_RULES.map(r => ({ ...r, group: "Doanh nghiệp (Tab 2.2)" })),
+        ...BANK_NOTES_RULES
+      ];
+      for (const rule of allRules) {
         for (const line of allLines) {
           if (rule.patterns.some(rx => rx.test(line))) {
             const numMatch = extractFirstLargeNumber(line, rule.codes);
             if (numMatch) {
-              found[rule.id] = { label: rule.label, raw: numMatch.raw, val: numMatch.val, line: line.slice(0, 95) };
+              found[rule.id] = { group: rule.group, label: rule.label, raw: numMatch.raw, val: numMatch.val };
               break;
             }
           }
         }
       }
 
-      // Tự động nhận diện đơn vị tiền tệ để quy về Triệu VND
       const unitMode = $("pdfUnitSelect") ? $("pdfUnitSelect").value : "auto";
       let divisor = 1;
       let unitLabel = "Triệu VND";
       const fullTextSample = allLines.slice(0, 120).join(" ");
-      const refVal = found.c_ta ? Math.abs(found.c_ta.val) : (found.c_sales ? Math.abs(found.c_sales.val) : 0);
+      const refVal = found.c_ta ? Math.abs(found.c_ta.val) : (found.npl_g1 ? Math.abs(found.npl_g1.val) : (found.npl_dep ? Math.abs(found.npl_dep.val) : (found.c_sales ? Math.abs(found.c_sales.val) : 0)));
 
-      if (unitMode === "vnd") { divisor = 1e6; unitLabel = "Đồng → quy Triệu VND"; }
-      else if (unitMode === "thousand") { divisor = 1e3; unitLabel = "Nghìn đồng → quy Triệu VND"; }
+      if (unitMode === "vnd") { divisor = 1e6; unitLabel = "Đồng → Triệu"; }
+      else if (unitMode === "thousand") { divisor = 1e3; unitLabel = "Nghìn → Triệu"; }
       else if (unitMode === "million") { divisor = 1; unitLabel = "Triệu VND"; }
-      else if (unitMode === "billion") { divisor = 1e-3; unitLabel = "Tỷ VND → quy Triệu VND"; }
+      else if (unitMode === "billion") { divisor = 1e-3; unitLabel = "Tỷ → Triệu"; }
       else {
-        // Tự động phát hiện
         if (/đơn\s*vị\s*tính\s*:?\s*(?:triệu|tr\.)/i.test(fullTextSample)) { divisor = 1; unitLabel = "Tự nhận: Triệu VND"; }
-        else if (/đơn\s*vị\s*tính\s*:?\s*(?:nghìn|ngàn)/i.test(fullTextSample)) { divisor = 1e3; unitLabel = "Tự nhận: Nghìn VND → Triệu"; }
-        else if (/đơn\s*vị\s*tính\s*:?\s*tỷ/i.test(fullTextSample)) { divisor = 1e-3; unitLabel = "Tự nhận: Tỷ VND → Triệu"; }
-        else if (refVal >= 1e9) { divisor = 1e6; unitLabel = "Tự nhận: VND → quy Triệu VND"; }
-        else if (refVal >= 1e6) { divisor = 1e3; unitLabel = "Tự nhận: Nghìn VND → quy Triệu VND"; }
+        else if (/đơn\s*vị\s*tính\s*:?\s*(?:nghìn|ngàn)/i.test(fullTextSample)) { divisor = 1e3; unitLabel = "Tự nhận: Nghìn → Triệu"; }
+        else if (/đơn\s*vị\s*tính\s*:?\s*tỷ/i.test(fullTextSample)) { divisor = 1e-3; unitLabel = "Tự nhận: Tỷ → Triệu"; }
+        else if (refVal >= 1e9) { divisor = 1e6; unitLabel = "Tự nhận: VND → Triệu"; }
+        else if (refVal >= 1e6) { divisor = 1e3; unitLabel = "Tự nhận: Nghìn → Triệu"; }
         else { divisor = 1; unitLabel = "Tự nhận: Triệu VND"; }
       }
 
-      // Tính EBIT = LN trước thuế (EBT) + Chi phí lãi vay nếu có
       if (found._ebt) {
         const intAbs = found.c_int ? Math.abs(found.c_int.val) : 0;
         found.c_ebit = {
-          label: "EBIT (tính từ LNTT + Lãi vay)",
+          group: "Doanh nghiệp (Tab 2.2)",
+          label: "EBIT (LNTT + Lãi vay)",
           raw: `${found._ebt.raw} + ${found.c_int ? found.c_int.raw : "0"}`,
-          val: found._ebt.val + intAbs,
-          line: "Tự động tính: EBIT = LN trước thuế + Chi phí lãi vay"
+          val: found._ebt.val + intAbs
         };
       }
 
-      // Điền tự động vào các ô input của Tab 2.2 (Doanh nghiệp)
+      const detectedYear = global.MultiYearEngine
+        ? global.MultiYearEngine.detectYearFromFilenameOrText(file.name, fullTextSample)
+        : String(new Date().getFullYear());
+
       let filledCount = 0;
+      let hasCorp = false, hasNpl = false, hasCarCamel = false;
+      const extractedInputs = {};
       const logRows = [];
       Object.entries(found).forEach(([domId, info]) => {
         if (domId === "_ebt") return;
         const converted = +(info.val / divisor).toFixed(2);
-        const absNeeded = ["c_cogs", "c_int"].includes(domId) ? Math.abs(converted) : converted;
+        const absNeeded = ["c_cogs", "c_int", "cc_opexp", "npl_g1", "npl_g2", "npl_g3", "npl_g4", "npl_g5", "npl_dep"].includes(domId)
+          ? Math.abs(converted)
+          : converted;
         if ($(domId)) {
           $(domId).value = absNeeded;
+          extractedInputs[domId] = absNeeded;
           filledCount++;
+          if (domId.startsWith("c_")) hasCorp = true;
+          if (domId.startsWith("npl_")) hasNpl = true;
+          if (domId.startsWith("cc_")) hasCarCamel = true;
         }
-        logRows.push({ domId, label: info.label, raw: info.raw, converted: absNeeded });
+        logRows.push({ sourceFile: `${file.name} (${detectedYear})`, domId, group: info.group || "BCTC", label: info.label, raw: info.raw, converted: absNeeded });
       });
 
-      // Cập nhật bảng log trích xuất
-      const logWrap = $("pdfExtractLog");
-      if (logWrap) {
-        if (logRows.length) {
-          logWrap.style.display = "block";
-          logWrap.innerHTML = `
-            <div style="font-weight:700; margin-bottom:6px;">Kết quả bóc tách tự động (${filledCount} chỉ tiêu • ${unitLabel} • ${pdf.numPages} trang):</div>
-            <div class="table-wrap" style="max-height:200px; overflow-y:auto;">
-              <table>
-                <thead><tr><th>Chỉ tiêu BCTC</th><th class="num">Số gốc trong PDF</th><th class="num">Đã nạp (Triệu VND)</th></tr></thead>
-                <tbody>
-                  ${logRows.map(r => `<tr><td><strong>${r.label}</strong></td><td class="num">${r.raw}</td><td class="num"><strong>${r.converted.toLocaleString("vi-VN")}</strong></td></tr>`).join("")}
-                </tbody>
-              </table>
-            </div>
-          `;
-        } else {
-          logWrap.style.display = "none";
+      if (filledCount > 0 && global.MultiYearEngine) {
+        global.MultiYearEngine.upsertYearData(detectedYear, extractedInputs, file.name, false);
+      }
+
+      if (hasNpl && found.npl_g1) {
+        const g1 = Math.abs(Number($("npl_g1").value) || 0);
+        const g2 = Math.abs(Number($("npl_g2").value) || 0);
+        const g3 = Math.abs(Number($("npl_g3").value) || 0);
+        const g4 = Math.abs(Number($("npl_g4").value) || 0);
+        const g5 = Math.abs(Number($("npl_g5").value) || 0);
+        const tot = g1 + g2 + g3 + g4 + g5;
+        if (tot > 0 && $("cc_npl")) {
+          $("cc_npl").value = +(((g3 + g4 + g5) / tot) * 100).toFixed(2);
+          hasCarCamel = true;
         }
       }
 
       if (filledCount === 0) {
-        setStatus("pdfUploadStatus", `Đã đọc ${pdf.numPages} trang nhưng không khớp tên chỉ tiêu BCTC chuẩn (TT200/TT133).`, "err");
-        return;
+        const msg = `Đọc ${pdf.numPages} trang nhưng không khớp tên chỉ tiêu BCTC/Thuyết minh chuẩn.`;
+        if (!opts.deferRun) setStatus("pdfUploadStatus", msg, "err");
+        return { ok: false, fileName: file.name, type: "pdf", message: msg, logRows: [] };
       }
 
-      // Tự động chạy lại mô hình Doanh nghiệp & đồng bộ BI Dashboard
-      if (global.runCorporateUI) global.runCorporateUI();
-      setStatus("pdfUploadStatus", `✅ Quét thành công ${filledCount} chỉ tiêu từ ${file.name} (${unitLabel}) → Đã tự động nhảy số Altman Z, 5 nhóm tỷ số & BI Dashboard!`, "ok");
+      if (!opts.deferRun) {
+        renderExtractLogTable(logRows, `Kết quả bóc tách tự động (${filledCount} chỉ tiêu • ${unitLabel} • ${pdf.numPages} trang):`);
+        const updatedMods = [];
+        if (hasCorp && global.runCorporateUI) { global.runCorporateUI(); updatedMods.push("Doanh nghiệp"); }
+        if (hasNpl && global.runNplUI) { global.runNplUI(); updatedMods.push("NPL"); }
+        if (hasCarCamel && global.runCarCamelUI) { global.runCarCamelUI(); updatedMods.push("CAR & CAMEL"); }
+        setStatus("pdfUploadStatus", `✅ Quét ${filledCount} chỉ tiêu từ ${file.name} (${unitLabel}) → Cập nhật ${updatedMods.join(", ")} & BI Dashboard!`, "ok");
+      }
+
+      return {
+        ok: true,
+        fileName: file.name,
+        type: "pdf",
+        detectedYear,
+        updatedFields: filledCount,
+        scorecardCount: 0,
+        hasCorp, hasNpl, hasCarCamel,
+        unitLabel,
+        pages: pdf.numPages,
+        logRows,
+        message: `PDF (${filledCount} chỉ tiêu • ${pdf.numPages}tr • ${unitLabel})`
+      };
     } catch (err) {
-      setStatus("pdfUploadStatus", `Lỗi quét PDF: ${err.message}`, "err");
+      if (!opts.deferRun) setStatus("pdfUploadStatus", `Lỗi quét PDF ${file.name}: ${err.message}`, "err");
+      return { ok: false, fileName: file.name, type: "pdf", message: err.message, logRows: [] };
     }
   }
 
+  // =========================================================================
+  // 4. NẠP HÀNG LOẠT NHIỀU TỆP CÙNG 1 LÚC (BATCH MULTI-FILE UPLOAD)
+  // =========================================================================
+  async function importMultipleFiles(fileList) {
+    const files = Array.from(fileList || []).filter(Boolean);
+    if (!files.length) return;
 
-  // =========================================================================
-  // 4. BỘ ĐỊNH TUYẾN THỐNG NHẤT (1 NÚT DUY NHẤT: EXCEL / CSV / PDF BCTC)
-  // =========================================================================
+    // Ưu tiên nạp Excel/CSV trước (để lấy khung nền), sau đó quét tuần tự các file PDF BCTC / Thuyết minh đè lên
+    const excelFiles = [];
+    const pdfFiles = [];
+    const unknownFiles = [];
+
+    files.forEach(f => {
+      const name = (f.name || "").toLowerCase();
+      if (name.endsWith(".pdf") || f.type === "application/pdf") pdfFiles.push(f);
+      else if (name.endsWith(".xlsx") || name.endsWith(".xls") || name.endsWith(".csv")) excelFiles.push(f);
+      else unknownFiles.push(f);
+    });
+
+    const ordered = [...excelFiles, ...pdfFiles];
+    const totalCount = files.length;
+    setStatus("globalStatus", `Đang xử lý ${totalCount} tệp cùng lúc...`, "info");
+    setStatus("uploadStatus", `Đang xử lý ${totalCount} tệp cùng lúc...`, "info");
+
+    const results = [];
+    const allLogRows = [];
+    let totalFields = 0;
+    let totalScorecardRows = 0;
+    let anyNplUpdated = false;
+
+    for (let i = 0; i < ordered.length; i++) {
+      const f = ordered[i];
+      setStatus("globalStatus", `Đang đọc tệp ${i + 1}/${ordered.length}: ${f.name}...`, "info");
+      const name = (f.name || "").toLowerCase();
+      let res;
+      if (name.endsWith(".pdf") || f.type === "application/pdf") {
+        res = await importPdfBCTC(f, { deferRun: true });
+      } else {
+        res = await importExcelWorkbook(f, { deferRun: true });
+      }
+      results.push(res);
+      if (res.ok) {
+        totalFields += res.updatedFields || 0;
+        if (res.scorecardCount) totalScorecardRows = res.scorecardCount;
+        if (res.hasNpl) anyNplUpdated = true;
+        if (res.logRows && res.logRows.length) allLogRows.push(...res.logRows);
+      }
+    }
+
+    unknownFiles.forEach(f => {
+      results.push({ ok: false, fileName: f.name, message: "Định dạng không hỗ trợ (chỉ nhận .xlsx, .xls, .csv, .pdf)." });
+    });
+
+    // Tính lại % NPL tổng hợp sau khi gộp tất cả các tệp (phòng trường hợp Nhóm 1-5 nằm ở tệp Thuyết minh riêng)
+    if (anyNplUpdated) {
+      const g1 = Math.abs(Number($("npl_g1")?.value) || 0);
+      const g2 = Math.abs(Number($("npl_g2")?.value) || 0);
+      const g3 = Math.abs(Number($("npl_g3")?.value) || 0);
+      const g4 = Math.abs(Number($("npl_g4")?.value) || 0);
+      const g5 = Math.abs(Number($("npl_g5")?.value) || 0);
+      const tot = g1 + g2 + g3 + g4 + g5;
+      if (tot > 0 && $("cc_npl")) {
+        $("cc_npl").value = +(((g3 + g4 + g5) / tot) * 100).toFixed(2);
+      }
+    }
+
+    const okList = results.filter(r => r.ok);
+    const errList = results.filter(r => !r.ok);
+
+    const detectedYears = Array.from(new Set(okList.map(r => r.detectedYear).filter(Boolean))).sort();
+
+    // Nếu có nạp dữ liệu đa năm, tự động nạp năm mới nhất vào giao diện hoạt động & cập nhật biểu đồ xu hướng đa năm
+    if (detectedYears.length > 0 && global.MultiYearEngine) {
+      const latestYr = detectedYears[detectedYears.length - 1];
+      global.MultiYearEngine.selectYear(latestYr);
+    } else if (okList.length > 0 && global.runAllModels) {
+      global.runAllModels();
+    }
+
+    // Hiển thị bảng đối chiếu gộp cho tất cả PDF đã quét
+    if (allLogRows.length > 0) {
+      renderExtractLogTable(
+        allLogRows,
+        `Kết quả gộp từ ${pdfFiles.length} tệp PDF (${allLogRows.length} chỉ tiêu${detectedYears.length ? ` • Các năm: ${detectedYears.join(", ")}` : ""}):`
+      );
+    }
+
+    // Tạo thông báo trạng thái ngắn gọn & đầy đủ
+    const summaryParts = [];
+    if (detectedYears.length > 0) summaryParts.push(`Năm: ${detectedYears.join(", ")}`);
+    if (totalFields > 0) summaryParts.push(`${totalFields} chỉ tiêu`);
+    if (totalScorecardRows > 0) summaryParts.push(`${totalScorecardRows.toLocaleString("vi-VN")} dòng Scorecard`);
+
+    if (okList.length > 0 && errList.length === 0) {
+      const okMsg = `✅ Đã nạp gộp ${okList.length}/${totalCount} tệp (${summaryParts.join(" + ") || "hoàn tất"}) & tự chạy toàn bộ 7 Tab!`;
+      setStatus("globalStatus", okMsg, "ok");
+      setStatus("uploadStatus", okMsg, "ok");
+    } else if (okList.length > 0 && errList.length > 0) {
+      const warnMsg = `⚠️ Thành công ${okList.length}/${totalCount} tệp (${summaryParts.join(" + ")}). Lỗi ${errList.length} tệp: ${errList.map(e => `${e.fileName} (${e.message})`).join("; ")}`;
+      setStatus("globalStatus", warnMsg, "info");
+      setStatus("uploadStatus", warnMsg, "info");
+    } else {
+      const errMsg = `❌ Không nạp được tệp nào: ${errList.map(e => `${e.fileName} (${e.message})`).join("; ")}`;
+      setStatus("globalStatus", errMsg, "err");
+      setStatus("uploadStatus", errMsg, "err");
+    }
+  }
+
   function importAnyFile(file) {
     if (!file) return;
-    const name = (file.name || "").toLowerCase();
-    if (name.endsWith(".pdf") || file.type === "application/pdf") {
-      setStatus("globalStatus", `Đang quét PDF: ${file.name}...`, "info");
-      Promise.resolve(importPdfBCTC(file)).then(() => {
-        const pdfEl = $("pdfUploadStatus");
-        if (pdfEl) {
-          const isErr = pdfEl.className.includes("status-err");
-          setStatus("globalStatus", pdfEl.textContent, isErr ? "err" : "ok");
-          setStatus("uploadStatus", pdfEl.textContent, isErr ? "err" : "ok");
-        }
-      });
-    } else if (name.endsWith(".xlsx") || name.endsWith(".xls") || name.endsWith(".csv")) {
-      setStatus("globalStatus", `Đang nạp Excel/CSV: ${file.name}...`, "info");
-      importExcelWorkbook(file);
-      setTimeout(() => {
-        const upEl = $("uploadStatus");
-        if (upEl) {
-          const isErr = upEl.className.includes("status-err");
-          setStatus("globalStatus", upEl.textContent, isErr ? "err" : "ok");
-        }
-      }, 450);
-    } else {
-      const msg = "Định dạng chưa hỗ trợ. Vui lòng chọn file .xlsx, .xls, .csv hoặc .pdf.";
-      setStatus("globalStatus", msg, "err");
-      setStatus("uploadStatus", msg, "err");
-    }
+    importMultipleFiles([file]);
   }
 
   global.DataImporter = {
     exportAllInOneExcel,
     importExcelWorkbook,
     importPdfBCTC,
+    importMultipleFiles,
     importAnyFile
   };
 })(window);

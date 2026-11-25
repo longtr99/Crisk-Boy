@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex, nofollow, noarchive" />
   <title>Crisk-boy</title>
-  <link rel="stylesheet" href="styles.css?v=2.9" />
+  <link rel="stylesheet" href="styles.css?v=2.12" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
@@ -17,9 +17,9 @@
       <p>Trọn bộ 10 Module tự động &amp; trực quan: Credit Scorecard 8 bước, Altman Z, Basel I/II/III, Phép đo Lãi suất &amp; Arbitrage, GAP/Duration/Convexity &amp; Phái sinh, Ngoại hối, Thanh khoản, Chứng khoán hóa CMO, CAR &amp; CAMEL</p>
     </div>
     <div class="header-actions">
-      <span class="version-badge">Crisk-boy v2.9</span>
-      <button class="btn btn-primary" style="background:#f59e0b; color:#0f172a; font-weight:700;" onclick="document.getElementById('unifiedFileInput').click()">📂 Nạp Data (Excel / CSV / PDF)</button>
-      <input type="file" id="unifiedFileInput" accept=".xlsx,.xls,.csv,.pdf,application/pdf" style="display:none" onchange="window.DataImporter.importAnyFile(this.files[0]); this.value='';" />
+      <span class="version-badge">Crisk-boy v2.12</span>
+      <button class="btn btn-primary" style="background:#f59e0b; color:#0f172a; font-weight:700;" onclick="document.getElementById('unifiedFileInput').click()">📂 Nạp Data (Nhiều tệp: Excel / CSV / PDF)</button>
+      <input type="file" id="unifiedFileInput" multiple accept=".xlsx,.xls,.csv,.pdf,application/pdf" style="display:none" onchange="window.DataImporter.importMultipleFiles(this.files); this.value='';" />
       <button class="btn btn-success" onclick="window.runAllModels()">▶ Chạy toàn bộ mô hình</button>
       <button class="btn btn-outline" id="btnToggleInsights" style="color:#0f172a;" onclick="window.toggleInsights()">📝 Ẩn thuyết minh</button>
       <button class="btn btn-outline" style="color:#0f172a;" onclick="window.DataImporter.exportAllInOneExcel()">⬇ Tải Excel Tổng</button>
@@ -173,6 +173,43 @@
         </div>
       </div>
 
+
+      <!-- 6. Phân tích Xu hướng Đa năm (Multi-Year Trend: Altman Z, NPL, CAR & ROE) -->
+      <div class="card" style="border-top: 4px solid #059669;">
+        <div class="card-header">
+          <h3>6. So sánh Xu hướng Đa năm (Multi-Year Trend: Altman Z, NPL, CAR &amp; ROE)</h3>
+          <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+            <input type="number" id="myYearInput" value="2026" min="2010" max="2035" style="width:82px; padding:4px 8px; font-size:0.82rem;" title="Nhập năm để lưu bộ số hiện tại" />
+            <button type="button" class="btn btn-primary btn-sm" onclick="window.MultiYearEngine.saveCurrentAsYear()">💾 Lưu kỳ hiện tại</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="window.MultiYearEngine.resetSampleYears()">↺ Mẫu 3 năm</button>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+          <div id="biMultiYearPills" class="ct-modes"></div>
+          <small style="color:var(--text-muted);">💡 Nạp nhiều tệp PDF/Excel BCTC của nhiều năm cùng lúc (VD: <code>BCTC_2023.pdf</code>, <code>BCTC_2024.pdf</code>, <code>BCTC_2025.pdf</code>) — hệ thống tự nhận năm &amp; vẽ xu hướng.</small>
+        </div>
+        <div class="chart-box"><canvas id="chartBiMultiYear"></canvas></div>
+        <div class="table-wrap" style="margin-top:12px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Năm</th>
+                <th>Tệp nguồn</th>
+                <th class="num">Altman Z</th>
+                <th class="num">NPL (%)</th>
+                <th class="num">CAR (%)</th>
+                <th class="num">ROE (%)</th>
+                <th class="num">CAMEL</th>
+                <th>Biến động YoY</th>
+                <th class="num">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="tblBiMultiYear"></tbody>
+          </table>
+        </div>
+        <div id="biMultiYearInsight" class="note-box"></div>
+      </div>
+
       <!-- Data Analyst Executive Narrative -->
       <div id="insight_bi_dashboard" class="insight-box"></div>
     </section>
@@ -194,8 +231,8 @@
           </div>
         </div>
         <div id="dropzone" class="dropzone" onclick="document.getElementById('unifiedFileInput').click()">
-          <strong>📂 Bấm chọn hoặc Kéo &amp; thả file Excel (.xlsx), CSV Scorecard hoặc PDF BCTC vào đây</strong><br/>
-          <small style="color:var(--text-muted);">Hệ thống tự động nhận diện loại file: <strong>Excel Tổng</strong> (điền cả 7 Tab), <strong>CSV/XLSX có cột TARGET</strong> (chạy Scorecard), hoặc <strong>PDF BCTC</strong> (tự quét số liệu Doanh nghiệp &amp; Altman Z).</small>
+          <strong>📂 Bấm chọn hoặc Kéo &amp; thả NHIỀU TỆP cùng lúc (Excel Tổng, CSV Scorecard, PDF BCTC &amp; Thuyết minh) vào đây</strong><br/>
+          <small style="color:var(--text-muted);">Hệ thống tự động nhận diện loại file: <strong>Excel Tổng</strong> (điền cả 7 Tab), <strong>CSV/XLSX có cột TARGET</strong> (chạy Scorecard), hoặc <strong>PDF BCTC &amp; Thuyết minh BCTC</strong> (tự quét Doanh nghiệp Altman Z + 5 nhóm nợ NPL + NII/OpEx/CAR Ngân hàng).</small>
         </div>
         <div style="margin-top:10px; display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
           <button class="btn btn-outline btn-sm" onclick="window.resetToSampleData()">↺ Dùng lại dữ liệu mẫu (1.500 KH)</button>
@@ -1111,13 +1148,14 @@
     </section>
   </main>
 
-  <script src="sample_data.js?v=2.9"></script>
-  <script src="models_engine.js?v=2.9"></script>
-  <script src="bank_risk_engine.js?v=2.9"></script>
-  <script src="chart_studio.js?v=2.9"></script>
-  <script src="narrative_engine.js?v=2.9"></script>
-  <script src="bi_dashboard.js?v=2.9"></script>
-  <script src="data_importer.js?v=2.9"></script>
-  <script src="app.js?v=2.9"></script>
+  <script src="sample_data.js?v=2.12"></script>
+  <script src="models_engine.js?v=2.12"></script>
+  <script src="bank_risk_engine.js?v=2.12"></script>
+  <script src="chart_studio.js?v=2.12"></script>
+  <script src="narrative_engine.js?v=2.12"></script>
+  <script src="bi_dashboard.js?v=2.12"></script>
+  <script src="multi_year_engine.js?v=2.12"></script>
+  <script src="data_importer.js?v=2.12"></script>
+  <script src="app.js?v=2.12"></script>
 </body>
 </html>

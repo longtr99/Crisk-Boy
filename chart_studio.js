@@ -30,7 +30,8 @@
     chartBiRadar:     { modes: ["radar", "bar", "hbar", "polar"], defaultMode: "radar", defaultLabels: true, title: "BI — Điểm Sức khỏe 6 Trụ cột Rủi ro (0–100)" },
     chartBiCreditMix: { modes: ["combo", "bar", "line", "area"], defaultMode: "combo", defaultLabels: true, title: "BI — Phổ Hạng Tín Dụng (Cross-filtered)" },
     chartBiCapitalStress: { modes: ["bar", "hbar", "line", "radar"], defaultMode: "bar", defaultLabels: true, title: "BI — Stress Test Vốn, Nợ xấu & Thanh khoản" },
-    chartBiRwaMix:    { modes: ["doughnut", "pie", "polar", "bar"], defaultMode: "doughnut", defaultLabels: true, title: "BI — Cơ cấu Tài sản Rủi ro (RWA & NPL)" }
+    chartBiRwaMix:    { modes: ["doughnut", "pie", "polar", "bar"], defaultMode: "doughnut", defaultLabels: true, title: "BI — Cơ cấu Tài sản Rủi ro (RWA & NPL)" },
+    chartBiMultiYear: { modes: ["line", "bar", "area", "radar"], defaultMode: "line", defaultLabels: true, title: "BI — Xu hướng Đa năm (Altman Z, NPL, CAR & ROE)" }
   };
 
   const MODE_LABELS = {

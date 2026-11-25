@@ -1195,18 +1195,15 @@
     ["dragenter", "dragover"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add("dragover"); }));
     ["dragleave", "drop"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove("dragover"); }));
     dz.addEventListener("drop", e => {
-      const f = e.dataTransfer?.files?.[0];
-      if (f) { if (global.DataImporter) global.DataImporter.importAnyFile(f); else handleFileUpload(f); }
+      const files = e.dataTransfer?.files;
+      if (files && files.length) {
+        if (global.DataImporter && global.DataImporter.importMultipleFiles) {
+          global.DataImporter.importMultipleFiles(files);
+        } else {
+          handleFileUpload(files[0]);
+        }
+      }
     });
-    const pdfDz = $("pdfDropzone");
-    if (pdfDz) {
-      ["dragenter", "dragover"].forEach(ev => pdfDz.addEventListener(ev, e => { e.preventDefault(); pdfDz.classList.add("dragover"); }));
-      ["dragleave", "drop"].forEach(ev => pdfDz.addEventListener(ev, e => { e.preventDefault(); pdfDz.classList.remove("dragover"); }));
-      pdfDz.addEventListener("drop", e => {
-        const f = e.dataTransfer?.files?.[0];
-        if (f && global.DataImporter) global.DataImporter.importPdfBCTC(f);
-      });
-    }
   }
 
   // Gắn toàn bộ hàm vào window để sự kiện inline HTML không bao giờ lỗi
@@ -1246,5 +1243,6 @@
     initCh1011Inputs();
     setupDropzone();
     runAllModels();
+    if (global.MultiYearEngine) global.MultiYearEngine.init();
   });
 })(window);
