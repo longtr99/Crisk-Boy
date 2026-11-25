@@ -1,4 +1,4 @@
-/* Crisk-boy v2.13 — Clean Banking Analytics UI */
+/* Crisk-boy v2.14 — Clean Banking Analytics UI */
 :root {
   --bg: #f4f7fb;
   --surface: #ffffff;
@@ -601,3 +601,92 @@ body.hide-insights .insight-box {
 .fill-ok { background: var(--success); }
 .fill-warn { background: var(--warning); }
 .fill-bad { background: var(--danger); }
+
+/* v2.14 Legal Entity & Stock Ticker Badge next to Crisk-boy title */
+.brand-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.company-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(52, 211, 153, 0.55);
+  color: #ecfdf5;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  max-width: 100%;
+}
+.company-badge:hover {
+  background: rgba(16, 185, 129, 0.30);
+}
+.company-badge.is-demo {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(203, 213, 225, 0.35);
+  color: #e2e8f0;
+  font-weight: 600;
+}
+.company-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 420px;
+}
+.company-ticker {
+  background: #f59e0b;
+  color: #0f172a;
+  padding: 1px 8px;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+
+/* Quick-select bar for 4 sample companies (v2.15) */
+.quick-company-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+.quick-company-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-right: 4px;
+}
+.quick-company-btn {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.quick-company-btn:hover {
+  border-color: #0284c7;
+  color: #0284c7;
+  background: #f0f9ff;
+}
+.quick-company-btn.active {
+  background: #0284c7;
+  border-color: #0284c7;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+}

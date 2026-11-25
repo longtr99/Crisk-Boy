@@ -394,8 +394,47 @@
     renderMultiYearUI();
   }
 
+
+  function loadSampleCompany(code) {
+    const sc = global.CreditSampleData && global.CreditSampleData.SAMPLE_COMPANIES && global.CreditSampleData.SAMPLE_COMPANIES[code];
+    if (!sc) return;
+    yearStore = {};
+    const yrs = Object.keys(sc.years).sort();
+    yrs.forEach(y => {
+      const inputs = sc.years[y];
+      yearStore[y] = {
+        year: String(y),
+        sources: [sc.source],
+        isSample: false,
+        inputs: { ...inputs },
+        metrics: computeMetricsForInputs(inputs)
+      };
+    });
+    const latest = yrs[yrs.length - 1];
+    activeYear = latest;
+    applyInputsToDom(yearStore[latest].inputs);
+    if ($("c_name")) $("c_name").value = sc.name;
+    saveToStorage();
+    if (global.WorkspaceState && typeof global.WorkspaceState.setCompany === "function") {
+      global.WorkspaceState.setCompany({ name: sc.name, ticker: sc.ticker, isDemo: false });
+    }
+    if (typeof global.runAllModels === "function") {
+      global.runAllModels();
+    }
+    renderMultiYearUI();
+    document.querySelectorAll(".quick-company-btn").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.company === code);
+    });
+    const st = $("globalStatus");
+    if (st) {
+      st.textContent = `Đã nạp ${sc.name} (${yrs[0]}–${latest})`;
+      st.className = "status-msg status-ok";
+    }
+  }
+
   global.MultiYearEngine = {
     init,
+    loadSampleCompany,
     detectYearFromFilenameOrText,
     upsertYearData,
     selectYear,

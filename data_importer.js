@@ -1,4 +1,4 @@
-/* data_importer.js v2.13 — Nạp hàng loạt nhiều tệp cùng lúc (Excel Tổng / CSV / PDF BCTC & Thuyết minh BCTC Ngân hàng) */
+/* data_importer.js v2.14 — Nạp hàng loạt nhiều tệp cùng lúc (Excel Tổng / CSV / PDF BCTC & Thuyết minh BCTC Ngân hàng) */
 (function (global) {
   "use strict";
 
@@ -214,7 +214,12 @@
                 if (sc.length && ("TARGET" in sc[0])) {
                   scorecardCount = sc.length;
                   if (global.setActiveScorecardDataset) global.setActiveScorecardDataset(sc);
+                  if (global.WorkspaceState) global.WorkspaceState.saveScorecardDataset(sc);
                 }
+              }
+              if (global.WorkspaceState) {
+                const comp = global.WorkspaceState.detectCompany(file.name, wb.SheetNames.join(" "));
+                if (comp) global.WorkspaceState.setCompany(comp);
               }
               let detectedYear = null;
               if (global.MultiYearEngine && Object.keys(extractedInputs).length > 0) {
@@ -237,6 +242,7 @@
               }
               scorecardCount = rows.length;
               if (global.setActiveScorecardDataset) global.setActiveScorecardDataset(rows);
+              if (global.WorkspaceState) global.WorkspaceState.saveScorecardDataset(rows);
               const msg = `Scorecard (${scorecardCount.toLocaleString("vi-VN")} dòng)`;
               if (!opts.deferRun) {
                 if (global.runScorecardUI) global.runScorecardUI();
@@ -535,6 +541,11 @@
         ? global.MultiYearEngine.detectYearFromFilenameOrText(file.name, fullTextSample)
         : String(new Date().getFullYear());
 
+      if (global.WorkspaceState) {
+        const comp = global.WorkspaceState.detectCompany(file.name, allLines.slice(0, 120).join("\n"));
+        if (comp) global.WorkspaceState.setCompany(comp);
+      }
+
       let filledCount = 0;
       let hasCorp = false, hasNpl = false, hasCarCamel = false;
       const extractedInputs = {};
@@ -701,9 +712,10 @@
     if (totalScorecardRows > 0) summaryParts.push(`${totalScorecardRows.toLocaleString("vi-VN")} dòng Scorecard`);
 
     if (okList.length > 0 && errList.length === 0) {
-      const okMsg = `✅ Đã nạp gộp ${okList.length}/${totalCount} tệp (${summaryParts.join(" + ") || "hoàn tất"}) & tự chạy toàn bộ 7 Tab!`;
+      const okMsg = `✅ Đã nạp gộp ${okList.length}/${totalCount} tệp (${summaryParts.join(" + ") || "hoàn tất"}) & tự động lưu (F5 không mất)!`;
       setStatus("globalStatus", okMsg, "ok");
       setStatus("uploadStatus", okMsg, "ok");
+      if (global.WorkspaceState) global.WorkspaceState.saveWorkspace({ lastStatus: okMsg });
     } else if (okList.length > 0 && errList.length > 0) {
       const warnMsg = `⚠️ Thành công ${okList.length}/${totalCount} tệp (${summaryParts.join(" + ")}). Lỗi ${errList.length} tệp: ${errList.map(e => `${e.fileName} (${e.message})`).join("; ")}`;
       setStatus("globalStatus", warnMsg, "info");

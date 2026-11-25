@@ -1183,6 +1183,7 @@
       runFxLiqSecUI();
       runCarCamelUI();
       setStatus("globalStatus", "Tất cả mô hình đã chạy tự động & cập nhật!", "ok");
+      if (global.WorkspaceState) global.WorkspaceState.saveWorkspace();
     } catch (err) {
       setStatus("globalStatus", `Có lỗi: ${err.message}`, "err");
     }
@@ -1242,7 +1243,12 @@
     initCh579Inputs();
     initCh1011Inputs();
     setupDropzone();
+    const wasRestored = global.WorkspaceState ? global.WorkspaceState.restoreWorkspace() : false;
     runAllModels();
     if (global.MultiYearEngine) global.MultiYearEngine.init();
+    if (wasRestored) {
+      setStatus("globalStatus", "💾 Đã tự động khôi phục dữ liệu đã lưu trước đó (F5 không bị mất)!", "ok");
+      setStatus("uploadStatus", "💾 Đang dùng dữ liệu đã lưu trong trình duyệt (bấm 'Xóa dữ liệu lưu' nếu muốn đổi công ty khác).", "ok");
+    }
   });
 })(window);
