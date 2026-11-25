@@ -1,4 +1,4 @@
-/* data_importer.js v2.12 — Nạp hàng loạt nhiều tệp cùng lúc (Excel Tổng / CSV / PDF BCTC & Thuyết minh BCTC Ngân hàng) */
+/* data_importer.js v2.13 — Nạp hàng loạt nhiều tệp cùng lúc (Excel Tổng / CSV / PDF BCTC & Thuyết minh BCTC Ngân hàng) */
 (function (global) {
   "use strict";
 
@@ -375,6 +375,67 @@
     `;
   }
 
+
+  // Quét OCR tự động cho PDF scan dạng ảnh (sử dụng Tesseract.js trên trình duyệt)
+  async function extractLinesWithOCR(pdf, fileName, allRules, maxPages = 15) {
+    if (typeof Tesseract === "undefined") {
+      throw new Error("Thư viện OCR (Tesseract.js) chưa nạp được (kiểm tra kết nối mạng).");
+    }
+    const pagesToScan = Math.min(pdf.numPages, maxPages);
+    const ocrLines = [];
+    const matchedIds = new Set();
+    let scannedPages = 0;
+
+    // Dùng 1 worker tái sử dụng cho nhiều trang để nhanh hơn đáng kể
+    const worker = await Tesseract.createWorker("vie+eng", 1, {
+      logger: () => {}
+    });
+
+    try {
+      for (let p = 1; p <= pagesToScan; p++) {
+        scannedPages = p;
+        const progMsg = `🔍 PDF scan ảnh — Đang chạy OCR trang ${p}/${pagesToScan} (${fileName})...`;
+        setStatus("globalStatus", progMsg, "info");
+        setStatus("uploadStatus", progMsg, "info");
+        setStatus("pdfUploadStatus", progMsg, "info");
+
+        const page = await pdf.getPage(p);
+        const viewport = page.getViewport({ scale: 1.75 });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(viewport.width);
+        canvas.height = Math.round(viewport.height);
+        const ctx = canvas.getContext("2d");
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        const { data } = await worker.recognize(canvas);
+        const pageLines = String(data.text || "")
+          .split(/\r?\n/)
+          .map(s => s.trim())
+          .filter(Boolean);
+
+        ocrLines.push(...pageLines);
+
+        // Kiểm tra dừng sớm nếu đã quét đủ các chỉ tiêu lõi (CĐKT + KQKD hoặc 5 nhóm nợ)
+        for (const line of pageLines) {
+          for (const rule of allRules) {
+            if (!matchedIds.has(rule.id) && rule.patterns.some(rx => rx.test(line))) {
+              if (extractFirstLargeNumber(line, rule.codes)) {
+                matchedIds.add(rule.id);
+              }
+            }
+          }
+        }
+        if (matchedIds.size >= 11 && p >= 10) {
+          break;
+        }
+      }
+    } finally {
+      await worker.terminate();
+    }
+
+    return { ocrLines, scannedPages };
+  }
+
   async function importPdfBCTC(file, opts = {}) {
     if (!file) return { ok: false, fileName: "", message: "Không có tệp PDF." };
     try {
@@ -413,17 +474,22 @@
           });
       }
 
-      if (totalChars < 40) {
-        const errMsg = "Bản scan dạng ảnh (không có lớp chữ text).";
-        if (!opts.deferRun) setStatus("pdfUploadStatus", `⚠️ ${file.name}: ${errMsg}`, "err");
-        return { ok: false, fileName: file.name, type: "pdf", message: errMsg, logRows: [] };
-      }
-
-      const found = {};
       const allRules = [
         ...BCTC_RULES.map(r => ({ ...r, group: "Doanh nghiệp (Tab 2.2)" })),
         ...BANK_NOTES_RULES
       ];
+
+      let usedOcr = false;
+      let ocrPagesCount = 0;
+
+      if (totalChars < 40) {
+        usedOcr = true;
+        const ocrRes = await extractLinesWithOCR(pdf, file.name, allRules, 15);
+        allLines.push(...ocrRes.ocrLines);
+        ocrPagesCount = ocrRes.scannedPages;
+      }
+
+      const found = {};
       for (const rule of allRules) {
         for (const line of allLines) {
           if (rule.patterns.some(rx => rx.test(line))) {
@@ -533,7 +599,7 @@
         unitLabel,
         pages: pdf.numPages,
         logRows,
-        message: `PDF (${filledCount} chỉ tiêu • ${pdf.numPages}tr • ${unitLabel})`
+        message: `PDF${usedOcr ? ` OCR ${ocrPagesCount}tr` : ""} (${filledCount} chỉ tiêu • ${unitLabel})`
       };
     } catch (err) {
       if (!opts.deferRun) setStatus("pdfUploadStatus", `Lỗi quét PDF ${file.name}: ${err.message}`, "err");
