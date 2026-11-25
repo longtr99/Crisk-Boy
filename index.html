@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex, nofollow, noarchive" />
   <title>Crisk-boy</title>
-  <link rel="stylesheet" href="styles.css?v=2.7" />
+  <link rel="stylesheet" href="styles.css?v=2.8" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 </head>
 <body>
   <header class="app-header">
@@ -16,9 +17,10 @@
       <p>Trọn bộ 10 Module tự động &amp; trực quan: Credit Scorecard 8 bước, Altman Z, Basel I/II/III, Phép đo Lãi suất &amp; Arbitrage, GAP/Duration/Convexity &amp; Phái sinh, Ngoại hối, Thanh khoản, Chứng khoán hóa CMO, CAR &amp; CAMEL</p>
     </div>
     <div class="header-actions">
-      <span class="version-badge">Crisk-boy v2.7</span>
+      <span class="version-badge">Crisk-boy v2.8</span>
       <button class="btn btn-success" onclick="window.runAllModels()">▶ Chạy toàn bộ mô hình</button>
       <button class="btn btn-outline" id="btnToggleInsights" style="color:#0f172a;" onclick="window.toggleInsights()">📝 Ẩn thuyết minh</button>
+      <button class="btn btn-outline" style="color:#0f172a;" onclick="window.DataImporter.exportAllInOneExcel()">⬇ Tải Excel Tổng</button>
       <button class="btn btn-outline" style="color:#0f172a;" onclick="window.exportSampleCSV()">⬇ Tải CSV mẫu</button>
       <span id="globalStatus" class="status-msg status-info">Sẵn sàng</span>
     </div>
@@ -279,18 +281,45 @@
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-header">
-          <h3>Nạp Dữ liệu Thực tế (CSV / Excel .xlsx) cho Credit Scorecard</h3>
+      <div class="grid-2">
+        <!-- Cột 1: Nạp File Excel Tổng (All-in-One) hoặc CSV Scorecard -->
+        <div class="card">
+          <div class="card-header">
+            <h3>1. Nạp 1 File Excel Tổng (All-in-One .xlsx) hoặc CSV Scorecard</h3>
+            <button class="btn btn-primary btn-sm" onclick="window.DataImporter.exportAllInOneExcel()">⬇ Tải Excel Tổng mẫu (6 sheet)</button>
+          </div>
+          <div id="dropzone" class="dropzone" onclick="document.getElementById('fileInput').click()">
+            <strong>Kéo &amp; thả File Excel Tổng (.xlsx) hoặc CSV Scorecard vào đây</strong><br/>
+            <small style="color:var(--text-muted);">Hỗ trợ nạp 1 lần <strong>toàn bộ 7 Tab</strong> (Scorecard, Doanh nghiệp, Tiêu dùng, Basel I/II/III, Dự án, NPL, ALM, CAR/CAMEL) và tự chạy auto 100%.</small>
+            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="window.handleFileUpload(this.files[0])" />
+          </div>
+          <div style="margin-top:10px; display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
+            <button class="btn btn-outline btn-sm" onclick="window.resetToSampleData()">↺ Dùng lại dữ liệu mẫu (1.500 KH)</button>
+            <span id="uploadStatus" class="status-msg status-info">Đang dùng bộ dữ liệu mẫu mô phỏng Home Credit (1.500 KH)</span>
+          </div>
         </div>
-        <div id="dropzone" class="dropzone" onclick="document.getElementById('fileInput').click()">
-          <strong>Kéo &amp; thả file CSV hoặc Excel (.xlsx) vào đây</strong> hoặc bấm để chọn tệp<br/>
-          <small style="color:var(--text-muted);">Yêu cầu có cột mục tiêu <code>TARGET</code> (giá trị 0 = Tốt, 1 = Nợ xấu). Hệ thống tự động chia Train/Val, Binning WoE/IV, chạy Logistic, vẽ ROC/KS/Master Scale và tính PSI/HHI.</small>
-          <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="window.handleFileUpload(this.files[0])" />
-        </div>
-        <div style="margin-top:10px; display:flex; align-items:center; flex-wrap:wrap; gap:10px;">
-          <button class="btn btn-outline btn-sm" onclick="window.resetToSampleData()">↺ Dùng lại dữ liệu mẫu Home Credit (1.500 dòng)</button>
-          <span id="uploadStatus" class="status-msg status-info">Đang dùng bộ dữ liệu mẫu mô phỏng Home Credit (1.500 KH)</span>
+
+        <!-- Cột 2: Quét tự động PDF Báo cáo Tài chính Doanh nghiệp -->
+        <div class="card">
+          <div class="card-header">
+            <h3>2. Quét tự động PDF BCTC Doanh nghiệp (Thông tư 200 / 133)</h3>
+            <select id="pdfUnitSelect" style="width:auto; padding:4px 8px; font-size:0.8rem;">
+              <option value="auto" selected>Đơn vị: Tự động nhận diện</option>
+              <option value="vnd">Gốc: Đồng (VND) → Triệu</option>
+              <option value="thousand">Gốc: Nghìn đồng → Triệu</option>
+              <option value="million">Gốc: Triệu đồng</option>
+              <option value="billion">Gốc: Tỷ đồng → Triệu</option>
+            </select>
+          </div>
+          <div id="pdfDropzone" class="dropzone" onclick="document.getElementById('pdfInput').click()">
+            <strong>📄 Kéo &amp; thả file PDF Báo cáo Tài chính (BCTC) vào đây</strong><br/>
+            <small style="color:var(--text-muted);">Tự động bóc tách Tài sản, Nợ, VCSH, Doanh thu, Giá vốn, Lãi vay, LNTT/LNST → tự điền Tab 2.2 (Altman Z &amp; 5 nhóm tỷ số) và cập nhật BI Dashboard.</small>
+            <input type="file" id="pdfInput" accept=".pdf,application/pdf" style="display:none" onchange="window.DataImporter.importPdfBCTC(this.files[0])" />
+          </div>
+          <div style="margin-top:10px;">
+            <span id="pdfUploadStatus" class="status-msg status-info">Sẵn sàng quét file PDF BCTC (hỗ trợ PDF có lớp chữ text)</span>
+          </div>
+          <div id="pdfExtractLog" class="note-box" style="display:none; margin-top:10px;"></div>
         </div>
       </div>
     </section>
@@ -466,6 +495,7 @@
         <div class="card-header">
           <h2>Nhập liệu Báo cáo Tài chính Doanh nghiệp (Đơn vị: Triệu VND)</h2>
           <div>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('pdfInput').click()">📄 Quét PDF BCTC tự động</button>
             <button class="btn btn-primary btn-sm" onclick="window.runCorporateUI()">▶ Tính Altman Z &amp; 5 Nhóm Tỷ số</button>
             <span id="corpStatus" class="status-msg status-ok">Đã cập nhật</span>
           </div>
@@ -1095,12 +1125,13 @@
     </section>
   </main>
 
-  <script src="sample_data.js?v=2.7"></script>
-  <script src="models_engine.js?v=2.7"></script>
-  <script src="bank_risk_engine.js?v=2.7"></script>
-  <script src="chart_studio.js?v=2.7"></script>
-  <script src="narrative_engine.js?v=2.7"></script>
-  <script src="bi_dashboard.js?v=2.7"></script>
-  <script src="app.js?v=2.7"></script>
+  <script src="sample_data.js?v=2.8"></script>
+  <script src="models_engine.js?v=2.8"></script>
+  <script src="bank_risk_engine.js?v=2.8"></script>
+  <script src="chart_studio.js?v=2.8"></script>
+  <script src="narrative_engine.js?v=2.8"></script>
+  <script src="bi_dashboard.js?v=2.8"></script>
+  <script src="data_importer.js?v=2.8"></script>
+  <script src="app.js?v=2.8"></script>
 </body>
 </html>

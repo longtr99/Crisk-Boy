@@ -109,8 +109,16 @@
   // =========================================================================
   // NẠP DỮ LIỆU CSV / EXCEL & TẢI FILE MẪU
   // =========================================================================
+  function setActiveScorecardDataset(rows) {
+    if (Array.isArray(rows) && rows.length) activeDataset = rows;
+  }
+
   function handleFileUpload(file) {
     if (!file) return;
+    if (global.DataImporter) {
+      global.DataImporter.importExcelWorkbook(file);
+      return;
+    }
     try {
       setStatus("uploadStatus", `Đang đọc file ${file.name}...`, "info");
       const reader = new FileReader();
@@ -1190,6 +1198,15 @@
       const f = e.dataTransfer?.files?.[0];
       if (f) handleFileUpload(f);
     });
+    const pdfDz = $("pdfDropzone");
+    if (pdfDz) {
+      ["dragenter", "dragover"].forEach(ev => pdfDz.addEventListener(ev, e => { e.preventDefault(); pdfDz.classList.add("dragover"); }));
+      ["dragleave", "drop"].forEach(ev => pdfDz.addEventListener(ev, e => { e.preventDefault(); pdfDz.classList.remove("dragover"); }));
+      pdfDz.addEventListener("drop", e => {
+        const f = e.dataTransfer?.files?.[0];
+        if (f && global.DataImporter) global.DataImporter.importPdfBCTC(f);
+      });
+    }
   }
 
   // Gắn toàn bộ hàm vào window để sự kiện inline HTML không bao giờ lỗi
@@ -1199,6 +1216,7 @@
   global.runCreditRiskSuiteUI = runCreditRiskSuiteUI;
   global.runAllModels = runAllModels;
   global.exportSampleCSV = exportSampleCSV;
+  global.setActiveScorecardDataset = setActiveScorecardDataset;
   global.handleFileUpload = handleFileUpload;
   global.resetToSampleData = resetToSampleData;
   global.runScorecardUI = runScorecardUI;
